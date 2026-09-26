@@ -1,0 +1,9 @@
+@layer reset, base, tokens, recipes, utilities;
+
+/* Navegación por mando (Xbox) — el foco tiene que verse claramente
+   desde el sofá, a varios metros de la pantalla. */
+body.gamepad-nav-active :focus {
+  outline: 4px solid #7c7cf0 !important;
+  outline-offset: 3px !important;
+  border-radius: 4px;
+}
