@@ -94,6 +94,20 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
   }
 
   /**
+   * The chosen input/output/camera devices are IDs specific to the
+   * hardware plugged into THIS device — syncing them would silently
+   * switch another device's microphone or speakers to a device ID that
+   * (most likely) doesn't even exist there.
+   */
+  localOnlyKeys(): (keyof TypeVoice)[] {
+    return [
+      "preferredAudioInputDevice",
+      "preferredAudioOutputDevice",
+      "preferredVideoDevice",
+    ];
+  }
+
+  /**
    * Validate the given data to see if it is compliant and return a compliant object
    */
   clean(input: Partial<TypeVoice>): TypeVoice {
