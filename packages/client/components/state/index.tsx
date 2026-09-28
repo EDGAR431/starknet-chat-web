@@ -30,6 +30,7 @@ import { Ordering } from "./stores/Ordering";
 import { ReleaseNotes } from "./stores/ReleaseNotes";
 import { ServerFolders } from "./stores/ServerFolders";
 import { Settings } from "./stores/Settings";
+import { Soundboard } from "./stores/Soundboard";
 import { Sounds } from "./stores/Sounds";
 import { Sync } from "./stores/Sync";
 import { Theme } from "./stores/Theme";
@@ -38,6 +39,7 @@ import { Voice } from "./stores/Voice";
 export { ALLOWED_IMAGE_TYPES } from "./stores/Draft";
 export type { ResolvedEntry } from "./stores/Ordering";
 export type { ServerFolder } from "./stores/ServerFolders";
+export type { SoundboardSound, TypeSoundboard } from "./stores/Soundboard";
 export type { Sounds, TypeSounds } from "./stores/Sounds";
 export { SyncWorker } from "./SyncWorker";
 
@@ -94,6 +96,7 @@ export class State {
   theme = new Theme(this);
   voice = new Voice(this);
   sounds = new Sounds(this);
+  soundboard = new Soundboard(this);
 
   /**
    * Iterate over all available stores

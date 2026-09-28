@@ -12,6 +12,7 @@ import { TypeNotificationOptions } from "./NotificationOptions";
 import { TypeOrdering } from "./Ordering";
 import { TypeReleaseNotes } from "./ReleaseNotes";
 import { TypeSettings } from "./Settings";
+import { TypeSoundboard } from "./Soundboard";
 import { TypeSounds } from "./Sounds";
 import { TypeTheme } from "./Theme";
 import { TypeVoice } from "./Voice";
@@ -24,6 +25,7 @@ type SynchronisedStores =
   | "theme"
   | "locale"
   | "sounds"
+  | "soundboard"
   | "voice"
   | "settings";
 
@@ -35,6 +37,7 @@ const STORE_KEYS: SynchronisedStores[] = [
   "theme",
   "locale",
   "sounds",
+  "soundboard",
   "voice",
   "settings",
 ];
@@ -48,6 +51,7 @@ export const OPTIONAL_SYNC_CATEGORIES: SynchronisedStores[] = [
   "theme",
   "locale",
   "sounds",
+  "soundboard",
   "voice",
   "settings",
 ];
@@ -315,6 +319,7 @@ export class Sync extends AbstractStore<"sync", TypeSynchronisation> {
             TypeTheme &
             TypeLocale &
             TypeSounds &
+            TypeSoundboard &
             TypeVoice &
             TypeSettings,
         )

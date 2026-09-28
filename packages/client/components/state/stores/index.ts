@@ -14,6 +14,7 @@ import { TypeOrdering } from "./Ordering";
 import { TypeReleaseNotes } from "./ReleaseNotes";
 import { TypeServerFolders } from "./ServerFolders";
 import { TypeSettings } from "./Settings";
+import { TypeSoundboard } from "./Soundboard";
 import { TypeSounds } from "./Sounds";
 import { TypeSynchronisation } from "./Sync";
 import { TypeTheme } from "./Theme";
@@ -32,6 +33,7 @@ export type Store = {
   "release-notes": TypeReleaseNotes;
   "server-folders": TypeServerFolders;
   settings: TypeSettings;
+  soundboard: TypeSoundboard;
   sounds: TypeSounds;
   sync: TypeSynchronisation;
   theme: TypeTheme;

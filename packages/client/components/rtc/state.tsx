@@ -118,6 +118,12 @@ class Voice {
   private screenShareTracks: Set<string>;
   private voiceProcessor?: VoiceProcessor;
 
+  // Caché de sonidos del soundboard ya decodificados (por fileId), para que
+  // repetir un mismo sonido en la llamada sea instantáneo en vez de volver
+  // a descargarlo y decodificarlo cada vez.
+  #soundboardBufferCache: Map<string, Promise<AudioBuffer>> = new Map();
+  #soundboardDecodeContext?: AudioContext;
+
   // Cifrado extremo a extremo de la llamada actual
   #e2eeKeyProvider: ExternalE2EEKeyProvider | undefined;
   #e2eeCallKeyBytes: Uint8Array | undefined;
@@ -681,6 +687,61 @@ class Voice {
     } catch (e) {
       this.onErr(e);
     }
+  }
+
+  /**
+   * Reproduce un sonido del soundboard en la llamada actual, mezclado en el
+   * audio saliente de nuestro micrófono para que el resto de participantes
+   * lo oigan igual que si fuese voz normal (mismo cifrado, misma ruta, sin
+   * protocolo aparte).
+   * @param fileId ID del adjunto de Autumn con el audio del sonido
+   * @param volume Volumen lineal del sonido (0 a 2), ya multiplicado por el
+   * volumen maestro del soundboard
+   */
+  async playSoundboardSound(fileId: string, volume: number): Promise<void> {
+    if (!this.voiceProcessor) {
+      console.warn(
+        "[soundboard] no hay una llamada de voz activa, no se puede reproducir el sonido",
+      );
+      return;
+    }
+
+    try {
+      const buffer = await this.loadSoundboardBuffer(fileId);
+      this.voiceProcessor.playSoundboardSound(buffer, volume);
+    } catch (e) {
+      console.error("[soundboard] no se pudo reproducir el sonido:", e);
+    }
+  }
+
+  /**
+   * Descarga y decodifica un sonido del soundboard, cacheando el resultado
+   * por fileId para que reproducirlo de nuevo sea instantáneo.
+   */
+  private loadSoundboardBuffer(fileId: string): Promise<AudioBuffer> {
+    const cached = this.#soundboardBufferCache.get(fileId);
+    if (cached) return cached;
+
+    const promise = (async () => {
+      const autumnUrl = this.config.features.autumn.url;
+      const res = await fetch(`${autumnUrl}/attachments/${fileId}`);
+      if (!res.ok) {
+        throw new Error(`No se pudo descargar el sonido (HTTP ${res.status})`);
+      }
+      const arrayBuffer = await res.arrayBuffer();
+
+      if (!this.#soundboardDecodeContext) {
+        this.#soundboardDecodeContext = new AudioContext();
+      }
+      return this.#soundboardDecodeContext.decodeAudioData(arrayBuffer);
+    })();
+
+    // Si falla, no dejamos la promesa rota en caché — así un próximo intento
+    // (p. ej. tras recuperar la conexión) puede volver a intentarlo.
+    promise.catch(() => this.#soundboardBufferCache.delete(fileId));
+
+    this.#soundboardBufferCache.set(fileId, promise);
+    return promise;
   }
 
   async toggleCamera() {

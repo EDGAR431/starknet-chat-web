@@ -22,6 +22,15 @@ export class VoiceProcessor implements TrackProcessor<
   private gainNode?: GainNode;
   private destinationNode?: MediaStreamAudioDestinationNode;
 
+  /**
+   * Bus that soundboard playback is routed through on its way to
+   * `destinationNode` — i.e. into the same track that gets published to
+   * LiveKit, so a soundboard sound reaches every other call participant
+   * exactly like normal mic audio (same encoding, same latency, works
+   * through E2EE without any extra protocol).
+   */
+  private soundboardBusNode?: GainNode;
+
   private disposeSolidjsContext: () => void = () => {};
 
   constructor(voiceSettings: Voice) {
@@ -156,6 +165,13 @@ export class VoiceProcessor implements TrackProcessor<
     // Create the destination node, connect the gain node and send it off to livekit
     this.destinationNode = context.createMediaStreamDestination();
     this.gainNode.connect(this.destinationNode);
+
+    // Soundboard sounds join the outgoing track through their own bus, so
+    // their volume is independent of the mic's input-volume setting.
+    this.soundboardBusNode = context.createGain();
+    this.soundboardBusNode.gain.value = 1.0;
+    this.soundboardBusNode.connect(this.destinationNode);
+
     this.processedTrack = this.destinationNode.stream.getAudioTracks()[0];
   }
 
@@ -165,12 +181,53 @@ export class VoiceProcessor implements TrackProcessor<
     this.noiseSuppressionNode?.disconnect();
     this.compressorNode?.disconnect();
     this.gainNode?.disconnect();
+    this.soundboardBusNode?.disconnect();
     this.destinationNode?.disconnect();
     this.sourceNode = undefined;
     this.highpassNode = undefined;
     this.noiseSuppressionNode = undefined;
     this.compressorNode = undefined;
     this.gainNode = undefined;
+    this.soundboardBusNode = undefined;
     this.destinationNode = undefined;
+  }
+
+  /**
+   * Play a soundboard sound, mixed directly into the outgoing mic track so
+   * every other call participant hears it exactly like normal voice audio.
+   *
+   * The sender also hears it locally (through their own speakers/headset,
+   * outside the published track — playing it back to yourself over the
+   * network would just double it), unless `monitor` is turned off.
+   *
+   * @param buffer Decoded audio to play
+   * @param volume Linear volume for this sound, 0 to 2
+   * @param monitor Whether the local user should also hear it (default true)
+   */
+  playSoundboardSound(
+    buffer: AudioBuffer,
+    volume: number,
+    monitor = true,
+  ): void {
+    if (!this.audioContext || !this.soundboardBusNode) return;
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+
+    const gain = this.audioContext.createGain();
+    gain.gain.value = volume;
+
+    source.connect(gain);
+    gain.connect(this.soundboardBusNode);
+    if (monitor) {
+      gain.connect(this.audioContext.destination);
+    }
+
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      gain.disconnect();
+    });
+
+    source.start();
   }
 }
