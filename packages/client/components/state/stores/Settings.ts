@@ -155,15 +155,6 @@ export class Settings extends AbstractStore<"settings", TypeSettings> {
   }
 
   /**
-   * Whether notifications are allowed is a permission granted to THIS
-   * browser, not to the account — syncing it would show "allowed" on a
-   * device that never actually asked for (or was granted) permission.
-   */
-  localOnlyKeys(): (keyof TypeSettings)[] {
-    return ["notifications:desktop", "notifications:push"];
-  }
-
-  /**
    * Validate the given data to see if it is compliant and return a compliant object
    */
   clean(input: Partial<TypeSettings>): TypeSettings {

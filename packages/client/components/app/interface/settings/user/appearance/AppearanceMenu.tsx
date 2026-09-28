@@ -1,10 +1,16 @@
-import { For, Match, Show, Switch, createSignal } from "solid-js";
+import { createSignal, For, Match, Show, Switch } from "solid-js";
 
-import { Trans, useLingui } from "@lingui-solid/solid/macro";
+import { Trans, useLingui } from "@lingui/solid/macro";
 import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
 import { useUser } from "@revolt/client";
+import {
+  consoleMode,
+  oskEnabled,
+  setConsoleMode,
+  setOskEnabled,
+} from "@revolt/common/lib/consoleMode";
 import {
   UNICODE_EMOJI_PACKS,
   UnicodeEmoji,
@@ -26,8 +32,10 @@ import {
 } from "@revolt/ui";
 import {
   FONT_KEYS,
+  FONTS,
   Fonts,
   MONOSPACE_FONT_KEYS,
+  MONOSPACE_FONTS,
   MonospaceFonts,
 } from "@revolt/ui/themes/fonts";
 
@@ -41,6 +49,15 @@ export function AppearanceMenu() {
   const state = useState();
   const { t } = useLingui();
   const [pickerRef, setPickerRef] = createSignal<HTMLDivElement>();
+
+  function loadFonts() {
+    for (const f in FONTS) FONTS[f as Fonts].load();
+  }
+
+  function loadMonoFonts() {
+    for (const f in MONOSPACE_FONTS)
+      MONOSPACE_FONTS[f as MonospaceFonts].load();
+  }
 
   return (
     <Column gap="lg">
@@ -57,7 +74,7 @@ export function AppearanceMenu() {
           Colours
         </Text>
 
-        <Row justify="stretch">
+        <Row gap="xs" justify="stretch">
           <Button
             group="connected-start"
             groupActive={state.theme.mode === "light"}
@@ -81,7 +98,7 @@ export function AppearanceMenu() {
           </Button>
         </Row>
 
-        {/* <Row justify="stretch">
+        {/* <Row gap="xs justify="stretch">
           <Button
             group="connected-start"
             groupActive={state.theme.preset === "stoat"}
@@ -171,7 +188,7 @@ export function AppearanceMenu() {
 
           {/* TODO: Cursed on mobile; may need to be replaced
           with FloatingSelect / similar on small screens */}
-          <Row justify="stretch">
+          <Row gap="xs" justify="stretch">
             <Button
               size="xs"
               group="connected-start"
@@ -206,7 +223,7 @@ export function AppearanceMenu() {
             </Button>
           </Row>
 
-          <Row justify="stretch">
+          <Row gap="xs" justify="stretch">
             <Button
               size="xs"
               group="connected-start"
@@ -355,9 +372,14 @@ export function AppearanceMenu() {
         onChange={(e) =>
           state.theme.setInterfaceFont(e.currentTarget.value as Fonts)
         }
+        onOpened={loadFonts}
       >
         <For each={FONT_KEYS}>
-          {(key) => <MenuItem value={key}>{key}</MenuItem>}
+          {(key) => (
+            <MenuItem value={key} style={{ "font-family": key }}>
+              {key}
+            </MenuItem>
+          )}
         </For>
       </FloatingSelect>
 
@@ -367,9 +389,14 @@ export function AppearanceMenu() {
         onChange={(e) =>
           state.theme.setMonospaceFont(e.currentTarget.value as MonospaceFonts)
         }
+        onOpened={loadMonoFonts}
       >
         <For each={MONOSPACE_FONT_KEYS}>
-          {(key) => <MenuItem value={key}>{key}</MenuItem>}
+          {(key) => (
+            <MenuItem value={key} style={{ "font-family": key }}>
+              {key}
+            </MenuItem>
+          )}
         </For>
       </FloatingSelect>
 
@@ -404,6 +431,26 @@ export function AppearanceMenu() {
             {(pack) => <EmojiPack pack={pack} />}
           </For>
         </FloatingSelect>
+      </Column>
+
+      <Column>
+        <Text class="title" size="small">
+          <Trans>Controller</Trans>
+        </Text>
+
+        <Checkbox
+          checked={consoleMode()}
+          onChange={(event) => setConsoleMode(event.currentTarget.checked)}
+        >
+          <Trans>Console mode (larger interface and button hints, for TV)</Trans>
+        </Checkbox>
+
+        <Checkbox
+          checked={oskEnabled()}
+          onChange={(event) => setOskEnabled(event.currentTarget.checked)}
+        >
+          <Trans>Show the on-screen keyboard when typing with a controller</Trans>
+        </Checkbox>
       </Column>
     </Column>
   );

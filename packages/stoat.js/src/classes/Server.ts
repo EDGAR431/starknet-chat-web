@@ -3,8 +3,10 @@ import { batch } from "solid-js";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type { ReactiveSet } from "@solid-primitives/set";
 import type {
+  APIRoutes,
   Server as APIServer,
   AllMemberResponse,
+  AuditLogEntry,
   BannedUser,
   Category,
   DataBanCreate,
@@ -12,6 +14,7 @@ import type {
   DataCreateServerChannel,
   DataEditRole,
   DataEditServer,
+  DiscoverRequest,
   Override,
   Role,
 } from "stoat-api";
@@ -20,6 +23,8 @@ import { decodeTime } from "ulid";
 import type { ServerCollection } from "../collections/ServerCollection.js";
 import { hydrate } from "../hydration/index.js";
 import type { ServerFlags } from "../hydration/server.js";
+import { HydratedServerMember } from "../hydration/serverMember.js";
+import { HydratedUser } from "../hydration/user.js";
 import {
   bitwiseAndEq,
   calculatePermission,
@@ -191,6 +196,13 @@ export class Server {
    */
   get discoverable(): boolean {
     return this.#collection.getUnderlyingObject(this.id).discoverable;
+  }
+
+  /**
+   * Approximate amount of members in this server
+   */
+  get approximateMemberCount(): number {
+    return this.#collection.getUnderlyingObject(this.id).approximateMemberCount;
   }
 
   /**
@@ -371,6 +383,36 @@ export class Server {
       server: this.id,
       user: userId,
     });
+  }
+  /**
+   * @param params
+   * @returns This server's tracked actions, members and users
+   */
+  async getAuditLogs(
+    params?: (APIRoutes & {
+      method: "get";
+      path: "/servers/{target}/audit_logs";
+      parts: 3;
+    })["params"],
+  ): Promise<{
+    audit_logs: AuditLogEntry[];
+    users: User[];
+    members: ServerMember[];
+  }> {
+    const logs = await this.#collection.client.api.get(
+      `/servers/${this.id as ""}/audit_logs`,
+      { ...params },
+    );
+
+    return batch(() => ({
+      audit_logs: logs.audit_logs,
+      users: logs.users.map((user) =>
+        this.#collection.client.users.getOrCreate(user._id, user),
+      ),
+      members: logs.members.map((member) =>
+        this.#collection.client.serverMembers.getOrCreate(member._id, member),
+      ),
+    }));
   }
 
   /**
@@ -643,10 +685,7 @@ export class Server {
 
   #synced: undefined | "partial" | "full";
 
-  async syncMembers(
-    excludeOffline?: boolean,
-    excludeOfflineUserCap?: number,
-  ): Promise<void> {
+  async syncMembers(excludeOffline?: boolean): Promise<void> {
     if (this.#synced && (this.#synced === "full" || excludeOffline)) return;
 
     const data = await this.#collection.client.api.get(
@@ -654,67 +693,37 @@ export class Server {
       { exclude_offline: excludeOffline },
     );
 
+    const newUsers: HydratedUser[] = [];
+    const newServerMembers: HydratedServerMember[] = [];
+
+    for (let i = 0; i < data.users.length; i++) {
+      const user = data.users[i];
+      if (!excludeOffline || user.online) {
+        const newUser = this.#collection.client.users.hydrateIfNotHas(
+          user._id,
+          user,
+        );
+        if (newUser) {
+          newUsers.push(newUser);
+        }
+        const newMember = this.#collection.client.serverMembers.hydrateIfNotHas(
+          data.members[i]._id,
+          data.members[i],
+        );
+        if (newMember) {
+          newServerMembers.push(newMember);
+        }
+      }
+    }
+
     batch(() => {
-      if (excludeOffline && excludeOfflineUserCap) {
-        // quick fix to cap users
-        let count = 0;
-
-        for (
-          let i = 0;
-          i < data.users.length && count < excludeOfflineUserCap;
-          i++
-        ) {
-          const user = data.users[i];
-          if (user.online && data.members[i].roles?.length) {
-            this.#collection.client.users.getOrCreate(user._id, user);
-            this.#collection.client.serverMembers.getOrCreate(
-              data.members[i]._id,
-              data.members[i],
-            );
-
-            count++;
-          }
-        }
-
-        for (
-          let i = 0;
-          i < data.users.length && count < excludeOfflineUserCap;
-          i++
-        ) {
-          const user = data.users[i];
-          if (user.online && !data.members[i].roles?.length) {
-            this.#collection.client.users.getOrCreate(user._id, user);
-            this.#collection.client.serverMembers.getOrCreate(
-              data.members[i]._id,
-              data.members[i],
-            );
-
-            count++;
-          }
-        }
-        // end quick fix
-      } else if (excludeOffline) {
-        for (let i = 0; i < data.users.length; i++) {
-          const user = data.users[i];
-          if (user.online) {
-            this.#collection.client.users.getOrCreate(user._id, user);
-            this.#collection.client.serverMembers.getOrCreate(
-              data.members[i]._id,
-              data.members[i],
-            );
-          }
-        }
-      } else {
-        for (let i = 0; i < data.users.length; i++) {
-          this.#collection.client.users.getOrCreate(
-            data.users[i]._id,
-            data.users[i],
-          );
-          this.#collection.client.serverMembers.getOrCreate(
-            data.members[i]._id,
-            data.members[i],
-          );
-        }
+      for (const newUser of newUsers) {
+        this.#collection.client.users.addHydratedUser(newUser);
+      }
+      for (const newServerMember of newServerMembers) {
+        this.#collection.client.serverMembers.addHydratedServerMember(
+          newServerMember,
+        );
       }
     });
   }
@@ -850,5 +859,34 @@ export class Server {
     }
 
     return highest;
+  }
+
+  /**
+   * Add server to the discover request queue
+   */
+  async requestDiscover(): Promise<void> {
+    await this.#collection.client.api.put(`/servers/${this.id as ""}/discover`);
+  }
+
+  /**
+   * Get the status of the discover request for this server
+   * @returns The discovery request for this server if one exists
+   */
+  async discoverRequestStatus(): Promise<DiscoverRequest> {
+    return await this.#collection.client.api.get(
+      `/servers/${this.id as ""}/discover`,
+    );
+  }
+
+  /**
+   * Cancel the discover request for this server
+   *
+   * This cannot be used to remove servers from discover that have already been accepted
+   * and should only be called on servers that have an outstanding discover request.
+   */
+  async cancelDiscoverRequest() {
+    await this.#collection.client.api.delete(
+      `/servers/${this.id as ""}/discover`,
+    );
   }
 }

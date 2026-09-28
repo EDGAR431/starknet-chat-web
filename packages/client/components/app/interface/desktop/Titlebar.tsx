@@ -15,7 +15,11 @@ import MdExpandContent from "@material-symbols/svg-400/outlined/expand_content.s
 import MdMinimize from "@material-symbols/svg-400/outlined/minimize.svg?component-solid";
 
 import Wordmark from "../../../../public/assets/web/wordmark.svg?component-solid";
-import { pendingUpdate } from "../../../../src/serviceWorkerInterface";
+import {
+  applyUpdateNow,
+  pendingUpdate,
+  updateWaitingLong,
+} from "../../../../src/serviceWorkerInterface";
 
 const isMacOS = navigator.platform.startsWith("Mac");
 const isNative = !!window.native;
@@ -114,14 +118,14 @@ export function Titlebar() {
                   </a>
                 </Match>
               </Switch>
-              <Show when={pendingUpdate()}>
+              <Show when={pendingUpdate() && updateWaitingLong()}>
                 {" "}
                 <div
                   style={{
                     "-webkit-app-region": "no-drag",
                   }}
                 >
-                  <Button size="sm" onPress={pendingUpdate()}>
+                  <Button size="sm" onPress={() => void applyUpdateNow()}>
                     Update
                   </Button>
                 </div>

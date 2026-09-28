@@ -1,6 +1,6 @@
 import { createSignal, onMount } from "solid-js";
 
-import { Trans, useLingui } from "@lingui-solid/solid/macro";
+import { Trans, useLingui } from "@lingui/solid/macro";
 
 import { CategoryButton, Checkbox, Column } from "@revolt/ui";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
@@ -41,6 +41,9 @@ declare global {
         ) => void,
       ): void;
       screenPickerCallback(idx: number, audio: boolean): void;
+      isWayland?(): boolean;
+      /** Reinicia la aplicación de escritorio por completo (versión ≥ 1.5.5) */
+      relaunch?(): void;
     };
 
     desktopConfig: {

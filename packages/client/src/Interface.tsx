@@ -16,13 +16,14 @@ import { Titlebar } from "@revolt/app/interface/desktop/Titlebar";
 import { useClient, useClientLifecycle } from "@revolt/client";
 import { State } from "@revolt/client/Controller";
 import { NotificationsWorker } from "@revolt/client/NotificationsWorker";
+import { CallRinger } from "@revolt/rtc";
 import { useModals } from "@revolt/modal";
 import { Navigate, useBeforeLeave, useLocation } from "@revolt/routing";
 import { useState } from "@revolt/state";
 import { LAYOUT_SECTIONS } from "@revolt/state/stores/Layout";
+import { LoadingScreen } from "@revolt/ui";
 
 import { SlideDrawer } from "../components/ui/components/navigation/SlideDrawer";
-import { LoadingScreen } from "./LoadingScreen";
 import { Sidebar } from "./interface/Sidebar";
 
 /**
@@ -134,6 +135,7 @@ const Interface = (props: { children: JSX.Element }) => {
         </Switch>
 
         <NotificationsWorker />
+        <CallRinger />
       </AppRoot>
     </MessageCache>
   );
@@ -183,9 +185,14 @@ const Content = styled("div", {
   variants: {
     sidebar: {
       false: {
+        paddingLeft: "var(--gap-md)",
         borderTopLeftRadius: "var(--borderRadius-lg)",
         borderBottomLeftRadius: "var(--borderRadius-lg)",
         overflow: "hidden",
+
+        _tablet: {
+          paddingLeft: 0,
+        },
       },
     },
   },

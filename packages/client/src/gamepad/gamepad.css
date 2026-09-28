@@ -1,0 +1,188 @@
+/* ---- Foco visible al usar mando (a varios metros de la pantalla) ---- */
+html[data-input="gamepad"] :focus,
+html[data-input="gamepad"] [data-gp-current] {
+  outline: 3px solid #ffd54f !important;
+  outline-offset: 2px !important;
+}
+html[data-input="gamepad"] [data-gp-item]:focus,
+html[data-input="gamepad"] [data-gp-item][data-gp-current] {
+  outline-offset: -3px !important;
+  background-color: rgba(255, 213, 79, 0.07);
+}
+/* El cursor sobra cuando se juega con mando */
+html[data-input="gamepad"],
+html[data-input="gamepad"] * {
+  cursor: none !important;
+}
+
+/* ---- Modo consola ---- */
+html.console-mode ::-webkit-scrollbar {
+  display: none;
+}
+html.console-mode body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.console-mode input,
+html.console-mode textarea,
+html.console-mode [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---- Barra de ayuda de botones ---- */
+.gp-hints {
+  /* Franja propia al pie: la interfaz se recorta para dejarle sitio */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--gp-hints-h, 36px);
+  box-sizing: border-box;
+  z-index: 2147483000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  overflow: hidden;
+  flex-wrap: nowrap;
+  border-radius: 0;
+  border-width: 1px 0 0 0;
+  color: #f2f4f8;
+  background: rgba(20, 24, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font: 600 14px/1 system-ui, "Segoe UI", sans-serif;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+.gp-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.gp-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 800 13px/1 system-ui, sans-serif;
+  color: #101318;
+  background: #c9ced8;
+}
+.gp-key[data-k="A"] { background: #6fd66f; }
+.gp-key[data-k="B"] { background: #ff6b6b; }
+.gp-key[data-k="X"] { background: #6aa8ff; }
+.gp-key[data-k="Y"] { background: #ffd54f; }
+.gp-key[data-k="LB"], .gp-key[data-k="RB"] { border-radius: 8px; }
+
+/* ---- Panel de depuración (?gpdebug=1) ---- */
+.gp-debug {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 2147483001;
+  max-width: 420px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #9fffb0;
+  font: 12px/1.35 ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+/* ---- Teclado en pantalla ---- */
+.gp-osk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2147483002;
+  padding: 10px 12px 8px;
+  background: rgba(16, 20, 28, 0.97);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f2f4f8;
+  font-family: system-ui, "Segoe UI", sans-serif;
+  user-select: none;
+}
+.gp-osk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.gp-osk-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.gp-osk-key {
+  flex: calc(var(--w, 1) * 1) 0 0;
+  min-width: 0;
+  height: 46px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #263042;
+  color: inherit;
+  font: 600 20px/1 system-ui, sans-serif;
+  cursor: none;
+}
+.gp-osk-key.wide {
+  background: #1d2634;
+  font-size: 16px;
+}
+.gp-osk-key.toggled {
+  background: #3b5bdb;
+}
+.gp-osk-key.active {
+  outline: 3px solid #ffd54f;
+  outline-offset: 1px;
+  background: #34435c;
+}
+.gp-osk-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  justify-content: center;
+  margin-top: 8px;
+  font: 600 13px/1 system-ui, sans-serif;
+  color: #c9ced8;
+}
+.gp-osk-hints b {
+  display: inline-block;
+  min-width: 22px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  text-align: center;
+  color: #101318;
+  background: #c9ced8;
+}
+.gp-osk-hints b[data-k="A"] { background: #6fd66f; }
+.gp-osk-hints b[data-k="B"] { background: #ff6b6b; }
+.gp-osk-hints b[data-k="X"] { background: #6aa8ff; }
+.gp-osk-hints b[data-k="Y"] { background: #ffd54f; }
+
+/* La aplicación se encoge para que el campo no quede tapado por el teclado */
+html.osk-open #root {
+  height: calc(100% - var(--osk-h, 0px));
+}
+html.gp-hints-on:not(.osk-open) #root {
+  height: calc(100% - var(--gp-hints-h, 36px));
+}
+html.osk-open .gp-hints {
+  display: none;
+}
+
+/* Deslizador en modo ajuste: contorno distinto para que se note */
+html[data-input="gamepad"] [data-gp-adjusting] {
+  outline: 4px solid #4fc3f7 !important;
+  outline-offset: 6px !important;
+  border-radius: 12px;
+}

@@ -1,4 +1,4 @@
-import { Trans, useLingui } from "@lingui-solid/solid/macro";
+import { Trans, useLingui } from "@lingui/solid/macro";
 
 import { Language, Languages, browserPreferredLanguage } from "@revolt/i18n";
 import type { LanguageEntry } from "@revolt/i18n/Languages";
@@ -34,9 +34,6 @@ export function LanguageSettings() {
       <CategoryButton.Group>
         <PickDateFormat />
         <PickTimeFormat />
-      </CategoryButton.Group>
-      <CategoryButton.Group>
-        <ContributeLanguageLink />
       </CategoryButton.Group>
     </Column>
   );
@@ -197,22 +194,3 @@ function PickTimeFormat() {
 //   );
 // }
 
-/**
- * Language contribution link
- */
-function ContributeLanguageLink() {
-  return (
-    <a href="https://translate.stoat.chat/projects/revolt/" target="_blank">
-      <CategoryButton
-        action="external"
-        icon={<MdTranslate {...iconSize(22)} />}
-        ignoreClick
-        description={
-          <Trans>Help contribute to an existing or new language</Trans>
-        }
-      >
-        <Trans>Contribute a language</Trans>
-      </CategoryButton>
-    </a>
-  );
-}

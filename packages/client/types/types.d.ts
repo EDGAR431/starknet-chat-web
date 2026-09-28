@@ -8,12 +8,19 @@ declare global {
   interface Window {
     __TAURI__: object;
   }
+
+  /** Identificador de compilación (definido en vite.config.ts) */
+  const __BUILD_ID__: string;
 }
 
 declare module "solid-js" {
   namespace JSX {
     interface Directives {
-      dndzone: SolidOptions;
+      dndzone: SolidOptions & {
+        transformDraggedElement?: () => (element?: HTMLElement) => void;
+        useCursorForDetection?: boolean | (() => boolean);
+        dropAnimationDisabled?: boolean | (() => boolean);
+      };
 
       scrollable:
         | true
@@ -96,6 +103,11 @@ declare module "solid-js" {
            * Member to display
            */
           member?: ServerMember;
+
+          /**
+           * Bot to display
+           */
+          bot?: { owner: string };
         };
         contextMenu?: Component;
         contextMenuHandler?: "click" | "contextmenu";

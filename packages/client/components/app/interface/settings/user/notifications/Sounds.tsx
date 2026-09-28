@@ -1,4 +1,4 @@
-import { Trans, useLingui } from "@lingui-solid/solid/macro";
+import { Trans, useLingui } from "@lingui/solid/macro";
 import { Show } from "solid-js";
 import { styled } from "styled-system/jsx";
 
@@ -210,6 +210,46 @@ export default function Sounds() {
               <Trans>Stream End</Trans>
               <IconButton
                 onPress={() => soundController.playSound("streamEnd", true)}
+                use:floating={{
+                  tooltip: {
+                    placement: "top",
+                    content: playSoundString,
+                  },
+                }}
+              >
+                <MdVolumeUp {...iconSize(18)} />
+              </IconButton>
+            </Content>
+          </CategoryButton>
+          <CategoryButton
+            action={<Checkbox checked={sounds.enabled("ringtoneIncoming")} />}
+            onClick={() => sounds.toggle("ringtoneIncoming")}
+            icon="blank"
+          >
+            <Content>
+              <Trans>Incoming Call</Trans>
+              <IconButton
+                onPress={() => soundController.playSound("ringtoneIncoming", true)}
+                use:floating={{
+                  tooltip: {
+                    placement: "top",
+                    content: playSoundString,
+                  },
+                }}
+              >
+                <MdVolumeUp {...iconSize(18)} />
+              </IconButton>
+            </Content>
+          </CategoryButton>
+          <CategoryButton
+            action={<Checkbox checked={sounds.enabled("ringtoneOutgoing")} />}
+            onClick={() => sounds.toggle("ringtoneOutgoing")}
+            icon="blank"
+          >
+            <Content>
+              <Trans>Outgoing Call</Trans>
+              <IconButton
+                onPress={() => soundController.playSound("ringtoneOutgoing", true)}
                 use:floating={{
                   tooltip: {
                     placement: "top",

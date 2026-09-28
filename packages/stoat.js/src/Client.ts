@@ -1,7 +1,6 @@
 import type { Accessor, Setter } from "solid-js";
 import { batch, createSignal } from "solid-js";
 
-import { ReactiveMap } from "@solid-primitives/map";
 import { AsyncEventEmitter } from "@vladfrangu/async_event_emitter";
 import { API } from "stoat-api";
 import type { DataLogin, Error, RevoltConfig, Role } from "stoat-api";
@@ -28,7 +27,7 @@ import {
   EventClient,
   type EventClientOptions,
 } from "./events/EventClient.js";
-import { ProtocolV1, UserSlowmodes, handleEvent } from "./events/v1.js";
+import { ProtocolV1, handleEvent } from "./events/v1.js";
 import type { HydratedChannel } from "./hydration/channel.js";
 import type { HydratedEmoji } from "./hydration/emoji.js";
 import type { HydratedMessage } from "./hydration/message.js";
@@ -83,6 +82,7 @@ export type Events = {
   serverDelete: [server: HydratedServer];
   serverLeave: [server: HydratedServer];
   serverRoleUpdate: [server: Server, roleId: string, previousRole: Role];
+  serverRoleRanksUpdate: [server: Server, ranks: string[]];
   serverRoleDelete: [server: Server, roleId: string, role: Role];
 
   serverMemberUpdate: [
@@ -183,13 +183,13 @@ export class Client extends AsyncEventEmitter<Events> {
   readonly serverMembers;
   readonly sessions;
   readonly users;
-  readonly userSlowmodes;
 
   readonly api: API;
   readonly options: ClientOptions;
   readonly events: EventClient<1>;
 
-  configuration: RevoltConfig | undefined;
+  readonly configuration: RevoltConfig | undefined;
+  #configLock?: Promise<void>;
   #session: Session | undefined;
   user: User | undefined;
 
@@ -202,9 +202,10 @@ export class Client extends AsyncEventEmitter<Events> {
   readonly connectionFailureCount: Accessor<number>;
   #setConnectionFailureCount: Setter<number>;
   #reconnectTimeout: number | undefined;
-  #slowmodeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
   /**
    * Create Stoat.js Client
+   * @param configuration Deprecated - Please use `Client.initConfig` if you need to override config.
    */
   constructor(options?: Partial<ClientOptions>, configuration?: RevoltConfig) {
     super();
@@ -256,8 +257,6 @@ export class Client extends AsyncEventEmitter<Events> {
     this.configured = configured;
     this.#setConfigured = setConfigured;
 
-    this.#fetchConfiguration();
-
     const [ready, setReady] = createSignal(false);
     this.ready = ready;
     this.#setReady = setReady;
@@ -277,7 +276,6 @@ export class Client extends AsyncEventEmitter<Events> {
     this.serverMembers = new ServerMemberCollection(this);
     this.sessions = new SessionCollection(this);
     this.users = new UserCollection(this);
-    this.userSlowmodes = new ReactiveMap<string, UserSlowmodes>();
 
     this.events = new EventClient(1, "json", this.options);
     this.events.on("error", (error) => this.emit("error", error));
@@ -343,13 +341,28 @@ export class Client extends AsyncEventEmitter<Events> {
   }
 
   /**
-   * Fetches the configuration of the server if it has not been already fetched.
+   * Fetches the server config. This is called automatically by `login()` or `loginBot()`,
+   * but you can call it first manually if you need to override any config options.
+   *
+   * Override example:
+   * ```ts
+   * await client.initConfig((config) => {
+   *   config.ws = "wss://example.com";
+   * });
+   * ```
    */
-  async #fetchConfiguration(): Promise<void> {
-    if (!this.configuration) {
-      this.configuration = await this.api.get("/");
-      this.#setConfigured(true);
+  async initConfig(preConfig?: (config: RevoltConfig) => void): Promise<void> {
+    if (!this.#configLock && !this.configuration) {
+      //Create promise lock to avoid race condition
+      this.#configLock = (async () => {
+        //@ts-expect-error readonly override
+        this.configuration = await this.api.get("/");
+        preConfig?.(this.configuration);
+        this.#setConfigured(true);
+        this.#configLock = undefined;
+      })();
     }
+    return this.#configLock;
   }
 
   /**
@@ -370,7 +383,7 @@ export class Client extends AsyncEventEmitter<Events> {
    * @returns An on-boarding function if on-boarding is required, undefined otherwise
    */
   async login(details: DataLogin): Promise<void> {
-    await this.#fetchConfiguration();
+    await this.initConfig();
     const data = await this.api.post("/auth/session/login", details);
     if (data.result === "Success") {
       this.#session = data;
@@ -393,7 +406,7 @@ export class Client extends AsyncEventEmitter<Events> {
    * @param token Bot token
    */
   async loginBot(token: string): Promise<void> {
-    await this.#fetchConfiguration();
+    await this.initConfig();
     this.#session = token;
     this.#updateHeaders();
     this.connect();
@@ -595,29 +608,10 @@ export class Client extends AsyncEventEmitter<Events> {
     return data.id;
   }
 
-  setSlowmode(channelId: string, data: UserSlowmodes): void {
-    const existing = this.#slowmodeTimers.get(channelId);
-    if (existing) clearTimeout(existing);
-
-    this.userSlowmodes.set(channelId, { ...data, receivedAt: Date.now() });
-
-    const timer = setTimeout(() => {
-      this.userSlowmodes.delete(channelId);
-      this.#slowmodeTimers.delete(channelId);
-      this.emit("userSlowmodes");
-    }, data.retry_after * 1000);
-
-    this.#slowmodeTimers.set(channelId, timer);
-  }
-
   /**
    * Backend enforced limits for the logged in user
    */
   get limits(): UserLimits | undefined {
-    if (!this.configured() || !this.user) {
-      return;
-    }
-
-    return this.user.limits;
+    if (this.configured() && this.user) return this.user.limits;
   }
 }

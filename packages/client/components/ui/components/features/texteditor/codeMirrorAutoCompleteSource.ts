@@ -14,26 +14,27 @@ import {
 } from "@revolt/markdown/emoji/UnicodeEmoji";
 import { useState } from "@revolt/state";
 
-import emojiMapping from "../../../emojiMapping.json";
 import { AutoCompleteSearchSpace } from "../../utils/autoComplete";
 
+import { EMOJI_KEYS, getEmojiByShorthand } from "@revolt/ui/emojis";
 import { isInCodeBlock } from "./codeMirrorCommon";
 
-const EMOJI_KEYS = Object.keys(emojiMapping).sort();
-const MAPPED_EMOJI_KEYS = EMOJI_KEYS.map(
-  (id) =>
-    ({
-      type: "emoji",
-      label: `:${id}:`,
-      apply: emojiMapping[id as keyof typeof emojiMapping],
-    }) as Completion,
-);
+const MAPPED_EMOJI_KEYS = EMOJI_KEYS.values()
+  .toArray()
+  .map(
+    (id) =>
+      ({
+        type: "emoji",
+        label: `:${id}:`,
+        apply: getEmojiByShorthand(id)?.emoji,
+      }) as Completion,
+  );
 
-const RE_match = /(?<!\w)[:@%#]\w*/;
-const RE_emojiValidFor = /(?<!\w):\w*/;
-const RE_mentionValidFor = /(?<!\w)@\w*/;
-const RE_roleValidFor = /(?<!\w)@\w*/;
-const RE_channelValidFor = /(?<!\w)#\w*/;
+const RE_match = /(?<!\p{L}\w)[:@%#][\p{L}\w\-+]*/u;
+const RE_emojiValidFor = /(?<!\p{L}\w):[\p{L}\w\-+]*/u;
+const RE_mentionValidFor = /(?<!\p{L}\w)@[\p{L}\w\-+]*/u;
+const RE_roleValidFor = /(?<!\p{L}\w)@[\p{L}\w\-+]*/u;
+const RE_channelValidFor = /(?<!\p{L}\w)#[\p{L}\w\-+]*/u;
 
 export function codeMirrorAutoCompleteSource(
   searchSpace: Accessor<AutoCompleteSearchSpace>,
@@ -69,15 +70,21 @@ export function codeMirrorAutoCompleteSource(
       // avoiding using `instanceof`, presumed slow
       const user = ((entry as { user: User })?.user ?? entry) as User;
 
+      // Only hit the store once to reduce watchers.
+      // If you need to access anything on the member more than once define a const here.
+      const displayName = entry.displayName;
+      const userName = user.username;
+      const id = entry.id;
+
       return {
         type: "user",
-        label: ("@" + entry.displayName).normalize("NFKC"),
-        displayLabel: entry.displayName,
+        label: ("@" + displayName).normalize("NFKC"),
+        displayLabel: displayName,
         detail:
-          entry.displayName !== user.username
-            ? `${user.username}#${user.discriminator}`
+          displayName !== userName
+            ? `${userName}#${user.discriminator}`
             : undefined,
-        apply: `<@${typeof entry.id === "string" ? entry.id : entry.id.user}> `,
+        apply: `<@${typeof id === "string" ? id : id.user}> `,
         url: entry.animatedAvatarURL,
       };
     }),

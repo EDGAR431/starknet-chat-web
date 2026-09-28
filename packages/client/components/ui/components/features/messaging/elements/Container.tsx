@@ -1,6 +1,6 @@
 import { JSX, Match, Show, Switch } from "solid-js";
 
-import { useLingui } from "@lingui-solid/solid/macro";
+import { useLingui } from "@lingui/solid/macro";
 import { cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
@@ -286,6 +286,9 @@ const infoText = cva({
         width: "calc(7ch * var(--gap-sm))",
         fontSize: "0.7em",
 
+        overflow: "hidden",
+        overflowWrap: "none",
+
         display: "block",
         textAlign: "right",
         marginTop: "0.15em",
@@ -334,6 +337,7 @@ export function MessageContainer(props: Props) {
   return (
     <div
       id={message?.id}
+      data-gp-item="message"
       ref={props.ref}
       onMouseEnter={() => props.onHover && props.onHover(true)}
       onMouseLeave={() => props.onHover && props.onHover(false)}
@@ -448,13 +452,17 @@ export function MessageContainer(props: Props) {
                   },
                 }}
               >
-                <Show when={props.edited}>(edited)</Show>
-                <Show when={!props.edited}>
-                  <Time
-                    value={props.timestamp}
-                    format="time"
-                    referenceTime={props._referenceTime}
-                  />
+                <Show
+                  when={props.edited}
+                  fallback={
+                    <Time
+                      value={props.timestamp}
+                      format="time"
+                      referenceTime={props._referenceTime}
+                    />
+                  }
+                >
+                  (edited)
                 </Show>
               </div>
             </Match>

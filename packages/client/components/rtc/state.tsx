@@ -2,6 +2,7 @@ import {
   Accessor,
   batch,
   createContext,
+  createEffect,
   createSignal,
   JSX,
   Setter,
@@ -16,29 +17,34 @@ import {
 import {
   ConnectionQuality,
   ExternalE2EEKeyProvider,
+  LocalTrackPublication,
   Room,
+  ScreenShareCaptureOptions,
   ScreenSharePresets,
   Track,
-  VideoResolution,
+  VideoEncoding,
+  VideoPresets,
 } from "livekit-client";
-import { DenoiseTrackProcessor } from "livekit-rnnoise-processor";
 import { Channel } from "stoat.js";
 
 import { SoundController, useClient, useSound } from "@revolt/client";
-import { CONFIGURATION } from "@revolt/common";
+import { useInstance } from "@revolt/instance";
 import { ModalController, useModals } from "@revolt/modal";
 import { useState } from "@revolt/state";
 import {
+  NoiseSuppresionState,
   ScreenShareQualityName,
   Voice as VoiceSettings,
 } from "@revolt/state/stores/Voice";
 import { VoiceCallCardContext } from "@revolt/ui/components/features/voice/callCard/VoiceCallCard";
 
+import { Device, useDevice } from "@revolt/common";
 import { InRoom } from "./components/InRoom";
 import { RoomAudioManager } from "./components/RoomAudioManager";
 import { distributeNewCallKey, listenForIncomingCallKey } from "../../src/e2ee/callKeyExchange";
 import { wrapCallKeyForParticipant, importPublicKey } from "../../src/e2ee/cryptoEngine";
 import { ensureDeviceKeyUploaded, getDeviceId, getOrCreateDeviceKeyPair } from "../../src/e2ee/deviceIdentity";
+import { VoiceProcessor } from "./VoiceProcessor";
 
 type State =
   | "READY"
@@ -47,11 +53,14 @@ type State =
   | "CONNECTED"
   | "RECONNECTING";
 
-type ScreenShareQuality = {
+export type VoiceLayout = "fullscreen" | "expanded" | "collapsed" | undefined;
+
+type ScreenShareQuality = Required<
+  Pick<ScreenShareCaptureOptions, "contentHint" | "resolution">
+> & {
   name: ScreenShareQualityName;
-  resolution: VideoResolution;
   fullName: string;
-  contentHint: string;
+  encoding: VideoEncoding;
 };
 
 class Voice {
@@ -90,8 +99,8 @@ class Voice {
   screenshare: Accessor<boolean>;
   #setScreenshare: Setter<boolean>;
 
-  fullscreen: Accessor<boolean>;
-  #setFullscreen: Setter<boolean>;
+  layout: Accessor<VoiceLayout>;
+  #setLayout: Setter<VoiceLayout>;
 
   focusId: Accessor<string | undefined>;
   #setFocus: Setter<string | undefined>;
@@ -100,10 +109,14 @@ class Voice {
   #setShowBar: Setter<boolean>;
 
   private sound: SoundController;
+  private device: Device;
 
-  private openModal;
   private getClient;
+  private openModal;
+  private config;
+  private limits;
   private screenShareTracks: Set<string>;
+  private voiceProcessor?: VoiceProcessor;
 
   // Cifrado extremo a extremo de la llamada actual
   #e2eeKeyProvider: ExternalE2EEKeyProvider | undefined;
@@ -115,9 +128,11 @@ class Voice {
     voiceSettings: VoiceSettings,
     modals: ModalController,
     sound: SoundController,
+    device: Device,
   ) {
     this.#settings = voiceSettings;
     this.sound = sound;
+    this.device = device;
 
     const [channel, setChannel] = createSignal<Channel>();
     this.channel = channel;
@@ -163,9 +178,9 @@ class Voice {
     this.screenshare = screenshare;
     this.#setScreenshare = setScreenshare;
 
-    const [fullscreen, setFullscreen] = createSignal(false);
-    this.fullscreen = fullscreen;
-    this.#setFullscreen = setFullscreen;
+    const [layout, setLayout] = createSignal<VoiceLayout>();
+    this.layout = layout;
+    this.#setLayout = setLayout;
 
     const [focus, setFocus] = createSignal<string>();
     this.focusId = focus;
@@ -175,11 +190,65 @@ class Voice {
     this.showBar = showBar;
     this.#setShowBar = setShowBar;
 
+    const inst = useInstance();
+    this.config = inst.config;
+    this.limits = inst.limits;
     this.openModal = modals.openModal;
-
     this.getClient = useClient();
 
     this.screenShareTracks = new Set();
+
+    // Setup settings listeners
+    this.settingsListeners();
+  }
+
+  // Dynamically set echo cancellation and gain control when the settings are changed
+  // These functions are needed to maintain reactivity. Don't ask me why but if you make them not functions it breaks.
+  private settingsListeners() {
+    const getSettings = () => this.#settings;
+
+    const setEchoCancellation = (echoCancellation: boolean) => {
+      const track = this.getMicrophoneTrack()?.audioTrack;
+      if (track) {
+        track.constraints.echoCancellation = echoCancellation;
+      }
+    };
+
+    const setAutoGainControl = (autoGainControl: boolean) => {
+      const track = this.getMicrophoneTrack()?.audioTrack;
+      if (track) {
+        track.constraints.autoGainControl = autoGainControl;
+      }
+    };
+
+    const setNoiseSuppression = (noiseSuppression: NoiseSuppresionState) => {
+      const track = this.getMicrophoneTrack()?.audioTrack;
+      if (track) {
+        if (noiseSuppression === "browser") {
+          track.constraints.noiseSuppression = true;
+          //@ts-expect-error voiceIsolation is not yet standard, but it supported by livekit and most chromium based browsers, including electron.
+          track.constraints.voiceIsolation = true;
+        } else {
+          track.constraints.noiseSuppression = false;
+          //@ts-expect-error voiceIsolation is not yet standard, but it supported by livekit and most chromium based browsers, including electron.
+          track.constraints.voiceIsolation = false;
+        }
+      }
+    };
+
+    const restartTrack = () => {
+      const track = this.getMicrophoneTrack()?.audioTrack;
+      if (track) {
+        track.restartTrack();
+      }
+    };
+
+    createEffect(() => {
+      setEchoCancellation(getSettings().echoCancellation ?? true);
+      setAutoGainControl(getSettings().autoGainControl ?? true);
+      setNoiseSuppression(getSettings().noiseSupression ?? "browser");
+      restartTrack();
+    });
   }
 
   async connect(channel: Channel, auth?: { url: string; token: string }) {
@@ -187,6 +256,7 @@ class Voice {
 
     const e2eeKeyProvider = new ExternalE2EEKeyProvider();
     this.#e2eeKeyProvider = e2eeKeyProvider;
+    this.device.setWakeLocked();
 
     const room = new Room({
       audioCaptureDefaults: {
@@ -194,11 +264,14 @@ class Voice {
         echoCancellation: this.#settings.echoCancellation,
         noiseSuppression: this.#settings.noiseSupression === "browser",
         autoGainControl: this.#settings.autoGainControl,
+        voiceIsolation: this.#settings.noiseSupression === "browser",
       },
       audioOutput: {
         deviceId: this.#settings.preferredAudioOutputDevice,
       },
       videoCaptureDefaults: {
+        // TODO: Support higher resolutions based on limits
+        resolution: VideoPresets.h720.resolution,
         deviceId: this.#settings.preferredVideoDevice,
       },
       encryption: {
@@ -206,6 +279,10 @@ class Voice {
         worker: new Worker(
           new URL("livekit-client/e2ee-worker", import.meta.url),
         ),
+      },
+      publishDefaults: {
+        videoEncoding: VideoPresets.h720.encoding,
+        screenShareEncoding: ScreenSharePresets.h720fps30.encoding,
       },
     });
 
@@ -232,13 +309,6 @@ class Voice {
           .setMicrophoneEnabled(this.#settings.micOn)
           .then((track) => {
             this.#settings.micOn = track != null;
-            if (this.#settings.noiseSupression === "enhanced") {
-              track?.audioTrack?.setProcessor(
-                new DenoiseTrackProcessor({
-                  workletCDNURL: CONFIGURATION.RNNOISE_WORKLET_CDN_URL,
-                }),
-              );
-            }
           });
       for (const p of room.remoteParticipants.values()) {
         const screenShareTrack = p.getTrackPublication(
@@ -263,7 +333,9 @@ class Voice {
           "jwk",
           this.#e2eeMyDeviceKeyPair.publicKey,
         );
-        await ensureDeviceKeyUploaded(this.getClient());
+        await ensureDeviceKeyUploaded(
+          this.getClient() as unknown as Parameters<typeof ensureDeviceKeyUploaded>[0],
+        );
 
         const myDeviceId = getDeviceId();
         const listenPromise = listenForIncomingCallKey(
@@ -289,7 +361,7 @@ class Voice {
         }
 
         this.#e2eeCallKeyBytes = rawKey;
-        this.#e2eeKeyProvider?.setKey(rawKey);
+        this.#e2eeKeyProvider?.setKey(rawKey as unknown as ArrayBuffer);
         this.#setE2eeActive(true);
         console.log(
           "%c🔒 Cifrado extremo a extremo establecido correctamente para esta llamada",
@@ -347,6 +419,16 @@ class Voice {
       }
     });
 
+        room.addListener("localTrackPublished", (pub) => {
+      if (pub.audioTrack && pub.audioTrack.source === Track.Source.Microphone) {
+        if (!pub.audioTrack.getProcessor()) {
+          pub.audioTrack?.setProcessor(
+            (this.voiceProcessor = new VoiceProcessor(this.#settings)),
+          );
+        }
+      }
+    });
+
     room.addListener("participantConnected", (participant) => {
       this.sound.playSound("userJoinVoice");
 
@@ -356,14 +438,18 @@ class Voice {
       if (this.#e2eeCallKeyBytes && this.#e2eeMyDeviceKeyPair && this.#e2eeMyPublicKeyJwk) {
         (async () => {
           try {
-            const res = await this.getClient().api.get(
-              `/e2ee/devices/${participant.identity}`,
-            );
+            const res = await (
+              this.getClient().api as unknown as {
+                get(path: string): Promise<{
+                  devices: { public_key: JsonWebKey; device_id: string }[];
+                }>;
+              }
+            ).get(`/e2ee/devices/${participant.identity}`);
             for (const device of res.devices) {
               const theirPublicKey = await importPublicKey(device.public_key);
               const callKeyObj = await crypto.subtle.importKey(
                 "raw",
-                this.#e2eeCallKeyBytes!,
+                this.#e2eeCallKeyBytes! as BufferSource,
                 { name: "AES-GCM", length: 256 },
                 true,
                 ["encrypt", "decrypt"],
@@ -431,13 +517,11 @@ class Voice {
 
     // Gather latency
     const selected = await Promise.any(
-      this.getClient().configuration!.features.livekit.nodes.map(
-        async (node) => {
-          return fetch(node.public_url.replace("wss", "https")).then(() => {
-            return node.name;
-          });
-        },
-      ),
+      this.config.features.livekit.nodes.map(async (node) => {
+        return fetch(node.public_url.replace("wss", "https")).then(() => {
+          return node.name;
+        });
+      }),
     );
 
     if (!auth) {
@@ -523,6 +607,7 @@ class Voice {
   }
 
   disconnect() {
+    this.device.releaseWakeLock();
     try {
       const room = this.room();
       if (!room) return;
@@ -539,7 +624,7 @@ class Voice {
         this.#setE2eeActive(false);
         this.#setRoom();
         this.#setChannel();
-        this.#setFullscreen(false);
+        this.#setLayout();
         this.vidTracks = () => [];
       });
 
@@ -633,57 +718,46 @@ class Voice {
         resolution: ScreenSharePresets.h720fps30.resolution,
         fullName: `720p 30FPS`,
         contentHint: "motion",
+        encoding: ScreenSharePresets.h720fps30.encoding,
       },
     };
 
-    if (this.getClient().configured()) {
-      // TODO: Use new user limits if the user is new - I don't think there's a way to do that now?
-      const limit =
-        this.getClient().configuration?.features.limits.default
-          .video_resolution;
+    const limit = this.limits().video_resolution;
 
-      // TODO: Add more resolutions to stream from if they're enabled. May tie into premium users in the future?
-      if (limit) {
-        if (
-          (limit[0] === 0 || limit[0] >= 1920) &&
-          (limit[1] === 0 || limit[1] >= 1080)
-        ) {
-          qualities.high = {
-            name: "high",
-            resolution: ScreenSharePresets.h1080fps30.resolution,
-            fullName: `1080p 30FPS`,
-            contentHint: "motion",
-          };
-          const originalResolution = ScreenSharePresets.original.resolution;
-          originalResolution.frameRate = 5;
-          originalResolution.aspectRatio = 0;
-          if (this.getClient().configured()) {
-            // TODO: Use new user limits if the user is new - I don't think there's a way to do that now?
-            const limit =
-              this.getClient().configuration?.features.limits.default
-                .video_resolution;
-            if (limit) {
-              originalResolution.width = limit[0];
-              originalResolution.height = limit[1];
-              // If both resolutions are limited, set aspect ratio
-              if (
-                originalResolution.height !== 0 &&
-                originalResolution.width !== 0
-              ) {
-                originalResolution.aspectRatio =
-                  originalResolution.width / originalResolution.height;
-              }
-            }
-          }
-          qualities.text = {
-            name: "text",
-            resolution: originalResolution,
-            fullName: `Source 5FPS`,
-            contentHint: "text",
-          };
-        }
+    // TODO: Add more resolutions to stream from if they're enabled. May tie into premium users in the future?
+    if (
+      (limit[0] === 0 || limit[0] >= 1920) &&
+      (limit[1] === 0 || limit[1] >= 1080)
+    ) {
+      qualities.high = {
+        name: "high",
+        resolution: ScreenSharePresets.h1080fps30.resolution,
+        fullName: `1080p 30FPS`,
+        contentHint: "motion",
+        encoding: ScreenSharePresets.h1080fps30.encoding,
+      };
+      const originalResolution = ScreenSharePresets.original.resolution;
+      originalResolution.frameRate = 5;
+      originalResolution.aspectRatio = 0;
+
+      const limit = this.limits().video_resolution;
+      originalResolution.width = limit[0];
+      originalResolution.height = limit[1];
+      // If both resolutions are limited, set aspect ratio
+      if (originalResolution.height !== 0 && originalResolution.width !== 0) {
+        originalResolution.aspectRatio =
+          originalResolution.width / originalResolution.height;
       }
+
+      qualities.text = {
+        name: "text",
+        resolution: originalResolution,
+        fullName: `Source 5FPS`,
+        contentHint: "text",
+        encoding: ScreenSharePresets.original.encoding,
+      };
     }
+
     return qualities;
   }
 
@@ -729,13 +803,14 @@ class Voice {
       }
 
       try {
+        const chosenQuality =
+          this.getEnabledScreenShareQualities()[
+            this.#settings.screenShareQuality || "low"
+          ];
         const localTrack = await room.localParticipant.setScreenShareEnabled(
           true,
           {
-            resolution:
-              this.getEnabledScreenShareQualities()[
-                this.#settings.screenShareQuality || "low"
-              ]?.resolution,
+            resolution: chosenQuality?.resolution,
             audio: {
               autoGainControl: false,
               echoCancellation: false,
@@ -744,6 +819,7 @@ class Voice {
               restrictOwnAudio: true,
             },
           },
+          { screenShareEncoding: chosenQuality?.encoding },
         );
 
         const screenAudioTrack = room.localParticipant.getTrackPublication(
@@ -773,19 +849,17 @@ class Voice {
             const quality = qualities[qualityName] || qualities.low!;
 
             if (localTrack.videoTrack) {
-              await localTrack.videoTrack.mediaStreamTrack.applyConstraints({
-                frameRate: { max: quality.resolution.frameRate },
-                width:
-                  quality.resolution.width === 0
-                    ? undefined
-                    : { max: quality.resolution.width },
-                height:
-                  quality.resolution.width === 0
-                    ? undefined
-                    : { max: quality.resolution.height },
-              });
-              localTrack.videoTrack.mediaStreamTrack.contentHint =
-                quality.contentHint;
+              await localTrack.videoTrack.applyScreenShareConstraints(
+                {
+                  resolution: {
+                    frameRate: quality.resolution.frameRate,
+                    width: quality.resolution.width,
+                    height: quality.resolution.height,
+                  },
+                  contentHint: quality.contentHint,
+                },
+                quality.encoding,
+              );
               if (!audio && screenAudioTrack?.track) {
                 room.localParticipant.unpublishTrack(screenAudioTrack.track);
               }
@@ -842,8 +916,12 @@ class Voice {
     }
   }
 
-  toggleFullscreen(fullscreen: boolean = !this.fullscreen()) {
-    this.#setFullscreen(fullscreen);
+  resetLayout() {
+    this.#setLayout();
+  }
+
+  toggleLayout(type: VoiceLayout) {
+    this.#setLayout((l) => (l === type ? undefined : type));
   }
 
   trackId(t: TrackReferenceOrPlaceholder) {
@@ -885,6 +963,13 @@ class Voice {
     );
   }
 
+  getMicrophoneTrack(): LocalTrackPublication | undefined {
+    const track = this.room()?.localParticipant.getTrackPublication(
+      Track.Source.Microphone,
+    );
+    return track;
+  }
+
   get listenPermission() {
     return !!this.channel()?.havePermission("Listen");
   }
@@ -908,7 +993,8 @@ export function VoiceContext(props: { children: JSX.Element }) {
   const state = useState();
   const modals = useModals();
   const sound = useSound();
-  const voice = new Voice(state.voice, modals, sound);
+  const device = useDevice();
+  const voice = new Voice(state.voice, modals, sound, device);
 
   return (
     <voiceContext.Provider value={voice}>

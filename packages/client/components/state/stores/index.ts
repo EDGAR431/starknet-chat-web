@@ -12,6 +12,7 @@ import { TypeLocale } from "./Locale";
 import { TypeNotificationOptions } from "./NotificationOptions";
 import { TypeOrdering } from "./Ordering";
 import { TypeReleaseNotes } from "./ReleaseNotes";
+import { TypeServerFolders } from "./ServerFolders";
 import { TypeSettings } from "./Settings";
 import { TypeSounds } from "./Sounds";
 import { TypeSynchronisation } from "./Sync";
@@ -29,6 +30,7 @@ export type Store = {
   notifications: TypeNotificationOptions;
   ordering: TypeOrdering;
   "release-notes": TypeReleaseNotes;
+  "server-folders": TypeServerFolders;
   settings: TypeSettings;
   sounds: TypeSounds;
   sync: TypeSynchronisation;
@@ -104,18 +106,4 @@ export abstract class AbstractStore<T extends keyof Store, D> {
    * Validate the given data to see if it is compliant and return a compliant object
    */
   abstract clean(input: Partial<D>): D;
-
-  /**
-   * Keys within this store's data that must stay on this device — never
-   * uploaded to the account-wide sync, and never overwritten by data that
-   * comes down from it.
-   *
-   * This is for values that are only meaningful on this specific piece of
-   * hardware or this specific browser (a chosen microphone, a browser
-   * notification permission) — syncing them would silently break, or
-   * incorrectly grant/revoke something on, every other device.
-   */
-  localOnlyKeys(): (keyof D)[] {
-    return [];
-  }
 }

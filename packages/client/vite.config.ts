@@ -1,4 +1,4 @@
-import { lingui as linguiSolidPlugin } from "@lingui-solid/vite-plugin";
+import { lingui as linguiSolidPlugin } from "@lingui/vite-plugin";
 import devtools from "@solid-devtools/transform";
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,24 +13,48 @@ import codegenPlugin from "./codegen.plugin";
 import { addFontPreload } from "./fontpreload.plugin";
 
 const base = process.env.BASE_PATH ?? "/";
+
+/** Identificador de esta compilación (también se publica en /version.json) */
+const BUILD_ID = process.env.BUILD_ID || Date.now().toString(36);
 const pwaScope = process.env.PWA_SCOPE || base;
 
 export default defineConfig({
   base,
+  define: {
+    // Identificador de esta compilación: permite ver de un vistazo si todos los
+    // clientes (web, escritorio) están en la misma versión.
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
+  },
   plugins: [
+    // Baliza de versión: los clientes la consultan (sin caché) para saber al
+    // instante si el servidor publicó una compilación nueva.
+    {
+      name: "starknet-version-beacon",
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify({ build: BUILD_ID }),
+        });
+      },
+    },
     Inspect(),
     devtools(),
     codegenPlugin(),
     babelMacrosPlugin(),
+    solidPlugin({
+      babel: {
+        plugins: ["@lingui/babel-plugin-lingui-macro"],
+      },
+    }),
     linguiSolidPlugin(),
-    solidPlugin(),
     solidSvg({
       defaultAsComponent: false,
     }),
     addFontPreload(),
     VitePWA({
       srcDir: "src",
-      registerType: "autoUpdate",
+      registerType: "prompt", // la actualización se aplica en un momento seguro (serviceWorkerInterface.ts)
       filename: "serviceWorker.ts",
       strategies: "injectManifest",
       injectManifest: {
@@ -39,6 +63,7 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
+        type: "module",
       },
       manifest: {
         name: "StarknetChat",
@@ -47,7 +72,6 @@ export default defineConfig({
         categories: ["communication", "chat", "messaging"],
         start_url: base,
         scope: pwaScope,
-        orientation: "any",
         display_override: ["window-controls-overlay"],
         display: "standalone",
         background_color: "#101823",

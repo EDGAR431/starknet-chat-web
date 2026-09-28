@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StarknetChat · Prueba Xbox</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;padding:5vh 6vw;background:#101318;color:#e8ecf2;font:22px/1.35 "Segoe UI",system-ui,sans-serif}
+  h1{font-size:36px;margin:0 0 4px} .sub{opacity:.7;margin-bottom:24px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 28px}
+  .row{display:flex;justify-content:space-between;gap:16px;padding:10px 14px;background:#1a2029;border-radius:10px}
+  .row b{font-weight:600} .v{opacity:.9;text-align:right;word-break:break-word}
+  .ok{color:#5ce08a}.bad{color:#ff6b6b}.wait{color:#ffd166}
+  h2{font-size:26px;margin:26px 0 10px;border-bottom:1px solid #2a3340;padding-bottom:6px}
+  #meter{height:16px;background:#2a3340;border-radius:8px;overflow:hidden;margin-top:6px}
+  #bar{height:100%;width:0;background:#5ce08a;transition:width .08s}
+  button{font:inherit;padding:12px 22px;border-radius:10px;border:2px solid #4a5a73;background:#1f2937;color:#fff;margin:8px 10px 0 0}
+  button:focus{outline:4px solid #7aa2ff}
+  pre{background:#0b0e12;padding:14px;border-radius:10px;white-space:pre-wrap;font-size:18px;max-height:24vh;overflow:auto}
+</style></head><body>
+<h1>StarknetChat · Prueba de capacidades Xbox</h1>
+<div class="sub">Se ejecuta sola. Espere unos 15 s y haga una captura (botón Compartir) o lea los resultados. Pulse <b>A</b> sobre un botón para repetir una prueba.</div>
+
+<h2>Entorno</h2><div class="grid" id="env"></div>
+<h2>Micrófono y audio</h2><div class="grid" id="media"></div>
+<div class="row" style="margin-top:14px"><b>Nivel del micrófono (hable o sople)</b><span id="lvl" class="v">–</span></div><div id="meter"><div id="bar"></div></div>
+<h2>WebRTC y red</h2><div class="grid" id="net"></div>
+<h2>Mando</h2><div class="grid" id="pad"></div>
+<h2>Ciclo de vida (suspensión al abrir otro juego)</h2><div class="grid" id="life"></div>
+<div>
+  <button id="b-mic">Repetir micrófono</button>
+  <button id="b-beep">Probar sonido</button>
+  <button id="b-net">Repetir red</button>
+  <button id="b-app">Abrir StarknetChat →</button>
+</div>
+<h2>Registro</h2><pre id="log"></pre>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const rows={};
+function row(sec,key,label){
+  if(rows[key]) return rows[key];
+  const d=document.createElement("div"); d.className="row";
+  d.innerHTML='<b></b><span class="v wait">…</span>'; d.firstChild.textContent=label;
+  $(sec).appendChild(d); rows[key]=d.lastChild; return rows[key];
+}
+function set(sec,key,label,text,state){ const el=row(sec,key,label); el.textContent=text; el.className="v "+(state||""); }
+const logEl=$("log");
+function log(m){ const t=new Date().toLocaleTimeString(); logEl.textContent=`[${t}] ${m}\n`+logEl.textContent.slice(0,4000); }
+const OK="ok",BAD="bad";
+const results={};
+function res(k,v){ results[k]=v; }
+
+// ---------- Entorno ----------
+set("env","ua","User-Agent",navigator.userAgent.replace(/\s+/g," "));
+set("env","secure","Contexto seguro (HTTPS)",String(window.isSecureContext),window.isSecureContext?OK:BAD);
+set("env","size","Ventana / DPR",`${innerWidth}×${innerHeight} @${devicePixelRatio}`);
+set("env","xbox","Detecta 'Xbox' en UA",/xbox/i.test(navigator.userAgent)?"sí":"no");
+set("env","origin","Origen",location.origin);
+res("ua",navigator.userAgent); res("secure",window.isSecureContext);
+
+// ---------- Audio de salida ----------
+let ac;
+async function beep(){
+  try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended") await ac.resume();
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.frequency.value=660; g.gain.value=.15; o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime+.35);
+    set("media","out","Salida de audio (WebAudio)","estado: "+ac.state,ac.state==="running"?OK:BAD);
+  }catch(e){ set("media","out","Salida de audio (WebAudio)","error: "+e.message,BAD); }
+}
+$("b-beep").onclick=beep;
+
+// ---------- Micrófono ----------
+let micStream;
+async function mic(){
+  set("media","md","navigator.mediaDevices",navigator.mediaDevices?"disponible":"NO disponible",navigator.mediaDevices?OK:BAD);
+  res("mediaDevices",!!navigator.mediaDevices);
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ set("media","gum","getUserMedia","no soportado",BAD); res("getUserMedia","unsupported"); return; }
+  try{
+    set("media","gum","getUserMedia (audio)","solicitando… (acepte el aviso)","wait");
+    micStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    const tr=micStream.getAudioTracks()[0]; const st=tr.getSettings();
+    set("media","gum","getUserMedia (audio)","CONCEDIDO",OK); res("getUserMedia","granted");
+    set("media","trk","Pista de micrófono",`${tr.label||"(sin etiqueta)"} · ${tr.readyState}`,OK);
+    set("media","st","Ajustes",`${st.sampleRate||"?"} Hz · eco:${st.echoCancellation} · ruido:${st.noiseSuppression}`);
+    try{
+      const devs=await navigator.mediaDevices.enumerateDevices();
+      const n=devs.filter(d=>d.kind==="audioinput").length, o=devs.filter(d=>d.kind==="audiooutput").length;
+      set("media","dev","Dispositivos audio",`${n} entrada(s) · ${o} salida(s)`); res("audioInputs",n);
+    }catch(e){ set("media","dev","Dispositivos audio","error: "+e.message,BAD); }
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==="suspended") await ac.resume().catch(()=>{});
+    const an=ac.createAnalyser(); an.fftSize=512; ac.createMediaStreamSource(micStream).connect(an);
+    const buf=new Uint8Array(an.fftSize); let peak=0;
+    const t0=performance.now();
+    (function tick(){
+      an.getByteTimeDomainData(buf); let m=0; for(const b of buf) m=Math.max(m,Math.abs(b-128));
+      const lv=m/128; peak=Math.max(peak,lv); $("bar").style.width=Math.min(100,lv*300)+"%";
+      $("lvl").textContent=`actual ${(lv*100)|0}% · pico ${(peak*100)|0}%`;
+      if(performance.now()-t0<12000) requestAnimationFrame(tick);
+      else { const ok=peak>0.02; set("media","sig","Señal real del micrófono (12 s)",ok?`SÍ (pico ${(peak*100)|0}%)`:"NO se detecta señal",ok?OK:BAD); res("micSignalPeak",peak); }
+    })();
+  }catch(e){
+    set("media","gum","getUserMedia (audio)",`${e.name}: ${e.message}`,BAD); res("getUserMedia",e.name+": "+e.message);
+  }
+}
+$("b-mic").onclick=mic;
+
+// ---------- WebRTC / red ----------
+async function net(){
+  set("net","pc","RTCPeerConnection",window.RTCPeerConnection?"disponible":"NO disponible",window.RTCPeerConnection?OK:BAD);
+  res("RTCPeerConnection",!!window.RTCPeerConnection);
+  if(window.RTCPeerConnection){
+    try{
+      const a=new RTCPeerConnection(), b=new RTCPeerConnection();
+      a.onicecandidate=e=>e.candidate&&b.addIceCandidate(e.candidate);
+      b.onicecandidate=e=>e.candidate&&a.addIceCandidate(e.candidate);
+      const dc=a.createDataChannel("t");
+      const got=new Promise((r,j)=>{ b.ondatachannel=ev=>{ ev.channel.onmessage=m=>r(m.data); }; setTimeout(()=>j(new Error("tiempo agotado")),8000); });
+      dc.onopen=()=>dc.send("hola");
+      const off=await a.createOffer(); await a.setLocalDescription(off); await b.setRemoteDescription(off);
+      const ans=await b.createAnswer(); await b.setLocalDescription(ans); await a.setRemoteDescription(ans);
+      const m=await got; set("net","loop","Bucle WebRTC local (datachannel)","OK: "+m,OK); res("webrtcLoopback",true);
+      a.close(); b.close();
+    }catch(e){ set("net","loop","Bucle WebRTC local (datachannel)","FALLO: "+e.message,BAD); res("webrtcLoopback",String(e)); }
+  }
+  // HTTPS a la API propia
+  try{
+    const r=await fetch("https://starknet-chat.tech/api/",{cache:"no-store"}); const j=await r.json();
+    set("net","api","API starknet-chat.tech","HTTP "+r.status+" · v"+(j.revolt||"?"),r.ok?OK:BAD); res("api",r.status);
+  }catch(e){ set("net","api","API starknet-chat.tech","FALLO: "+e.message,BAD); res("api",String(e)); }
+  // WebSocket de eventos
+  try{
+    await new Promise((ok,ko)=>{ const ws=new WebSocket("wss://starknet-chat.tech/ws?version=1&format=json"); const t=setTimeout(()=>{ws.close();ko(new Error("tiempo agotado"))},8000);
+      ws.onopen=()=>{clearTimeout(t);ws.close();ok();}; ws.onerror=()=>{clearTimeout(t);ko(new Error("error de conexión"))}; });
+    set("net","ws","WebSocket wss://…/ws","conecta",OK); res("websocket",true);
+  }catch(e){ set("net","ws","WebSocket wss://…/ws","FALLO: "+e.message,BAD); res("websocket",String(e)); }
+  // LiveKit (voz): el endpoint responde HTTP aunque no haya sesión
+  try{
+    const r=await fetch("https://starknet-chat.tech/livekit/",{cache:"no-store"});
+    set("net","lk","Ruta /livekit (voz)","HTTP "+r.status,"ok"); res("livekitHttp",r.status);
+  }catch(e){ set("net","lk","Ruta /livekit (voz)","FALLO: "+e.message,BAD); res("livekitHttp",String(e)); }
+}
+$("b-net").onclick=net;
+$("b-app").onclick=()=>{ location.href="https://starknet-chat.tech/?console=1"; };
+
+// ---------- Mando ----------
+const pressed=new Set(); let padSeen=false;
+function pads(){ return (navigator.getGamepads?[...navigator.getGamepads()].filter(Boolean):[]); }
+addEventListener("gamepadconnected",e=>{ log("mando conectado: "+e.gamepad.id); });
+setInterval(()=>{
+  const g=pads()[0];
+  if(!navigator.getGamepads){ set("pad","api","Gamepad API","NO disponible",BAD); return; }
+  if(!g){ set("pad","api","Gamepad API","disponible · pulse un botón del mando","wait"); return; }
+  padSeen=true; res("gamepad",{id:g.id,mapping:g.mapping,buttons:g.buttons.length,axes:g.axes.length});
+  set("pad","api","Gamepad API","detectado",OK);
+  set("pad","id","Mando",`${g.id.slice(0,60)} · mapping:${g.mapping||"?"}`);
+  const b=g.buttons.map((x,i)=>x.pressed?i:null).filter(x=>x!==null);
+  set("pad","btn","Botones pulsados",b.length?b.join(", "):"–");
+  set("pad","ax","Sticks (izq / der)",`${g.axes.slice(0,2).map(v=>v.toFixed(2)).join(", ")} / ${g.axes.slice(2,4).map(v=>v.toFixed(2)).join(", ")}`);
+},120);
+set("pad","api","Gamepad API","comprobando…","wait");
+
+// ---------- Ciclo de vida ----------
+let last=Date.now(), maxGap=0, beats=0, gaps=[];
+setInterval(()=>{ const now=Date.now(), gap=now-last; last=now; beats++;
+  if(gap>3000){ gaps.push(`${(gap/1000).toFixed(0)} s`); log(`⚠ el temporizador se detuvo ${(gap/1000).toFixed(1)} s (¿app suspendida?)`); }
+  maxGap=Math.max(maxGap,gap);
+  set("life","hb","Latido (1/s)",`${beats} · mayor pausa ${(maxGap/1000).toFixed(1)} s`);
+  set("life","gaps","Suspensiones detectadas",gaps.length?gaps.join(" · "):"ninguna",gaps.length?BAD:OK);
+  res("suspensions",gaps);
+},1000);
+document.addEventListener("visibilitychange",()=>{ set("life","vis","Visibilidad",document.visibilityState,document.visibilityState==="visible"?OK:BAD); log("visibilidad: "+document.visibilityState); });
+set("life","vis","Visibilidad",document.visibilityState,OK);
+set("life","how","Cómo probar suspensión","Vuelva al menú (botón Xbox), abra un juego 30 s y regrese aquí","wait");
+
+// ---------- Arranque ----------
+log("prueba iniciada"); beep(); mic(); net();
+window.__results=results;
+</script></body></html>

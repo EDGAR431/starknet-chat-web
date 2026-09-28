@@ -145,6 +145,7 @@ type ServerMessage =
       role_id: string;
       data: Partial<Role>;
     }
+  | { type: "ServerRoleRanksUpdate"; id: string; ranks: string[] }
   | { type: "ServerRoleDelete"; id: string; role_id: string }
   | {
       type: "UserUpdate";
@@ -733,6 +734,25 @@ export async function handleEvent(
       }
       break;
     }
+    case "ServerRoleRanksUpdate": {
+      const server = client.servers.getOrPartial(event.id);
+      if (server && event.ranks) {
+        event.ranks.forEach((roleId: string, idx: number) => {
+          const role = server.roles.get(roleId);
+          if (role) {
+            server.roles.set(
+              roleId,
+              new ServerRole(client, server.id, roleId, {
+                ...role,
+                rank: idx,
+              } as never),
+            );
+          }
+        });
+        client.emit("serverRoleRanksUpdate", server, event.ranks);
+      }
+      break;
+    }
     case "ServerRoleDelete": {
       const server = client.servers.getOrPartial(event.id);
       if (server) {
@@ -885,6 +905,10 @@ export async function handleEvent(
       break;
     }
     case "UserRelationship": {
+      // Live UserUpdate events are dropped for unknown users (see UserUpdate
+      // below), so make sure this user exists in the cache before delegating.
+      client.users.getOrCreate(event.user._id, event.user);
+
       handleEvent(
         client,
         {
@@ -1006,7 +1030,10 @@ export async function handleEvent(
     }
     case "UserSlowmodes": {
       for (const slowmode of event.slowmodes) {
-        client.setSlowmode(slowmode.channel_id, slowmode);
+        const channel = client.channels.getOrPartial(slowmode.channel_id);
+        if (channel) {
+          channel.setUserSlowmode(slowmode);
+        }
       }
       client.emit("userSlowmodes");
       break;

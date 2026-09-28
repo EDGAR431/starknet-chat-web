@@ -1,4 +1,4 @@
-import { Trans } from "@lingui-solid/solid/macro";
+import { Trans } from "@lingui/solid/macro";
 import { ConnectionQuality } from "livekit-client";
 import { createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";

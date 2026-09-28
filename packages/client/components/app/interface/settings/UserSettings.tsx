@@ -1,11 +1,11 @@
 import { Show } from "solid-js";
 
-import { Trans } from "@lingui-solid/solid/macro";
+import { Trans } from "@lingui/solid/macro";
 import { Server } from "stoat.js";
 import { css } from "styled-system/css";
 
 import { useClient, useClientLifecycle } from "@revolt/client";
-import { CONFIGURATION } from "@revolt/common";
+import { useInstance } from "@revolt/instance";
 import { useUser } from "@revolt/markdown/users";
 import { useModals } from "@revolt/modal";
 import { fetchLatestChangelog } from "@revolt/modal/modals/Changelog";
@@ -114,12 +114,7 @@ const Config: SettingsConfiguration<{ server: Server }> = {
   list(_, onClose) {
     const { pop, openModal } = useModals();
     const { logout } = useClientLifecycle();
-    const client = useClient();
-
-    const legalLinks = () =>
-      client().configured()
-        ? client().configuration?.features.legal_links
-        : undefined;
+    const { limits, config } = useInstance();
 
     return {
       context: null!,
@@ -136,7 +131,9 @@ const Config: SettingsConfiguration<{ server: Server }> = {
             <span class={css({ userSelect: "none", fontWeight: "bold" })}>
               <Trans>Version:</Trans>
             </span>{" "}
-            <span class={css({ userSelect: "all" })}>{pkg.version}</span>
+            <span class={css({ userSelect: "all" })}>
+              {pkg.version} · {__BUILD_ID__}
+            </span>
           </Text>
           <Show when={window.native}>
             <Text class="label">
@@ -156,7 +153,7 @@ const Config: SettingsConfiguration<{ server: Server }> = {
               </span>
             </Text>
           </Show>
-          <Show when={legalLinks()}>
+          <Show when={config.features.legal_links}>
             {(links) => (
               <Text class="label">
                 <span
@@ -261,7 +258,7 @@ const Config: SettingsConfiguration<{ server: Server }> = {
             {
               id: "voice",
               icon: <MdMic {...iconSize(20)} />,
-              title: CONFIGURATION.ENABLE_VIDEO ? (
+              title: limits().video ? (
                 <Trans>Voice & Video</Trans>
               ) : (
                 <Trans>Voice</Trans>

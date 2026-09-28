@@ -135,8 +135,43 @@ export class SoundController {
       }
     }
     this.lastPlayedSound = sound;
-    this.node.play();
+    // Browsers may block audio before the first user interaction; never throw.
+    this.node.play().catch(() => {});
     return true;
+  }
+
+  #loopNode?: HTMLAudioElement;
+
+  /**
+   * Start a looping ringtone (incoming / outgoing call). Stops any ringtone
+   * that is already looping. Respects the user's sound settings.
+   *
+   * @param sound Which ringtone to loop
+   * @returns Whether the ringtone started
+   */
+  startLoop(sound: "ringtoneIncoming" | "ringtoneOutgoing"): boolean {
+    this.stopLoop();
+    if (!this.soundState.enabled(sound)) return false;
+
+    const node = new Audio(
+      sound === "ringtoneIncoming"
+        ? ringtoneIncomingSound
+        : ringtoneOutgoingSound,
+    );
+    node.loop = true;
+    this.#loopNode = node;
+    node.play().catch(() => {});
+    return true;
+  }
+
+  /**
+   * Stop the looping ringtone, if any
+   */
+  stopLoop() {
+    if (!this.#loopNode) return;
+    this.#loopNode.pause();
+    this.#loopNode.removeAttribute("src");
+    this.#loopNode = undefined;
   }
 }
 
