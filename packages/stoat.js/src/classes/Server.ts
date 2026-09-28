@@ -42,6 +42,16 @@ import { User } from "./User.js";
 import { VoiceStatus } from "./VoiceParticipant.js";
 
 /**
+ * Marker written to a channel's description to identify it as the
+ * per-server soundboard's data store — a normal text channel used to hold
+ * one message per sound (JSON metadata + the audio as its attachment),
+ * since there is no backend soundboard API to build this on. Channels
+ * carrying this marker are filtered out of `orderedChannels` so they never
+ * show up in the regular channel list.
+ */
+export const SOUNDBOARD_CHANNEL_MARKER = "__starknet_soundboard__";
+
+/**
  * Server Class
  */
 export class Server {
@@ -219,7 +229,13 @@ export class Server {
   get orderedChannels(): (Omit<Category, "channels"> & {
     channels: Channel[];
   })[] {
-    const uncategorised = new Set(this.channels.map((channel) => channel.id));
+    const uncategorised = new Set(
+      this.channels
+        .filter(
+          (channel) => channel.description !== SOUNDBOARD_CHANNEL_MARKER,
+        )
+        .map((channel) => channel.id),
+    );
 
     const elements = [];
     let defaultCategory;

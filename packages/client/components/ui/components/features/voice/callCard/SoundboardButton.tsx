@@ -1,6 +1,12 @@
 import { offset, flip, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { For, Show, createSignal, onCleanup } from "solid-js";
+import {
+  For,
+  Show,
+  createEffect,
+  createSignal,
+  onCleanup,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import { styled } from "styled-system/jsx";
 
@@ -8,6 +14,14 @@ import { Trans, useLingui } from "@lingui/solid/macro";
 
 import { useClient } from "@revolt/client";
 import { useVoice } from "@revolt/rtc";
+import {
+  addServerSound,
+  fetchServerSounds,
+  findOrCreateSoundboardChannel,
+  findSoundboardChannel,
+  removeServerSound,
+  type ServerSound,
+} from "@revolt/rtc/serverSoundboard";
 import { useState } from "@revolt/state";
 import type { SoundboardSound } from "@revolt/state";
 import { Button, IconButton, TextField } from "@revolt/ui/components/design";
@@ -19,9 +33,10 @@ import { Symbol } from "@revolt/ui/components/utils/Symbol";
  * anyone else in the call just hears them as normal voice — no separate
  * realtime protocol involved.
  *
- * Per-server soundboards (shared with a server's members) are not covered
- * here yet — this is the personal soundboard only, synced across this
- * account's devices through the regular settings sync.
+ * Two boards are shown: the personal one (synced across this account's
+ * devices) and, when the call is a server voice channel, that server's
+ * shared board (stored as messages in a hidden channel — see
+ * @revolt/rtc/serverSoundboard for why).
  */
 export function SoundboardButton(props: { size: "xs" | "sm" }) {
   const { t } = useLingui();
@@ -51,6 +66,8 @@ export function SoundboardButton(props: { size: "xs" | "sm" }) {
   );
 }
 
+type Scope = "personal" | "server";
+
 function SoundboardPanel(props: {
   anchor: () => HTMLElement | undefined;
   onClose: () => void;
@@ -75,60 +92,132 @@ function SoundboardPanel(props: {
   document.addEventListener("mousedown", onMouseDown);
   onCleanup(() => document.removeEventListener("mousedown", onMouseDown));
 
-  const [adding, setAdding] = createSignal(false);
+  // El servidor de la llamada actual, si es un canal de voz de servidor
+  // (en una DM/grupo no hay soundboard compartido).
+  const server = () => voice.channel()?.server;
+  const canManageServerBoard = () =>
+    server()?.havePermission("ManageServer") ?? false;
+
+  const [serverSounds, setServerSounds] = createSignal<ServerSound[]>([]);
+  const [loadingServerSounds, setLoadingServerSounds] = createSignal(false);
+  const [serverBoardError, setServerBoardError] = createSignal<string>();
+
+  createEffect(() => {
+    const srv = server();
+    if (!srv) {
+      setServerSounds([]);
+      return;
+    }
+
+    const channel = findSoundboardChannel(srv);
+    if (!channel) {
+      // Nadie ha añadido un sonido a este servidor todavía.
+      setServerSounds([]);
+      return;
+    }
+
+    setLoadingServerSounds(true);
+    fetchServerSounds(channel)
+      .then(setServerSounds)
+      .catch((e) => {
+        console.error(
+          "[soundboard] no se pudieron cargar los sonidos del servidor:",
+          e,
+        );
+        setServerBoardError(t`No se pudieron cargar los sonidos del servidor`);
+      })
+      .finally(() => setLoadingServerSounds(false));
+  });
+
+  const [adding, setAdding] = createSignal<Scope>();
   const [pendingFile, setPendingFile] = createSignal<File>();
   const [soundName, setSoundName] = createSignal("");
   const [soundEmoji, setSoundEmoji] = createSignal("");
   const [uploading, setUploading] = createSignal(false);
   const [error, setError] = createSignal<string>();
-  let fileInput: HTMLInputElement | undefined;
+  let personalFileInput: HTMLInputElement | undefined;
+  let serverFileInput: HTMLInputElement | undefined;
 
-  function play(sound: SoundboardSound) {
+  function play(sound: { fileId: string; volume: number }) {
     voice.playSoundboardSound(
       sound.fileId,
       sound.volume * state.soundboard.masterVolume,
     );
   }
 
-  function onFileChosen(e: Event) {
-    const file = (e.currentTarget as HTMLInputElement).files?.[0];
-    (e.currentTarget as HTMLInputElement).value = "";
-    if (!file) return;
+  function onFileChosen(scope: Scope) {
+    return (e: Event) => {
+      const input = e.currentTarget as HTMLInputElement;
+      const file = input.files?.[0];
+      input.value = "";
+      if (!file) return;
 
-    // 512KB is plenty for a short soundboard clip and keeps this fast to
-    // fetch/decode every time it's triggered in a call.
-    if (file.size > 512 * 1024) {
-      setError(t`El archivo es demasiado grande (máx. 512 KB)`);
-      return;
-    }
+      // 512KB is plenty for a short soundboard clip and keeps this fast to
+      // fetch/decode every time it's triggered in a call.
+      if (file.size > 512 * 1024) {
+        setError(t`El archivo es demasiado grande (máx. 512 KB)`);
+        return;
+      }
 
-    setError(undefined);
-    setPendingFile(file);
-    setSoundName(file.name.replace(/\.[^/.]+$/, "").slice(0, 32));
-    setSoundEmoji("");
-    setAdding(true);
+      setError(undefined);
+      setPendingFile(file);
+      setSoundName(file.name.replace(/\.[^/.]+$/, "").slice(0, 32));
+      setSoundEmoji("");
+      setAdding(scope);
+    };
   }
 
   async function confirmAdd() {
+    const scope = adding();
     const file = pendingFile();
-    if (!file || !soundName().trim()) return;
+    if (!scope || !file || !soundName().trim()) return;
 
     setUploading(true);
     setError(undefined);
     try {
       const fileId = await client().uploadFile("attachments", file);
-      state.soundboard.addSound({
-        name: soundName().trim(),
-        emoji: soundEmoji().trim() || undefined,
-        fileId,
-      });
-      setAdding(false);
+
+      if (scope === "personal") {
+        state.soundboard.addSound({
+          name: soundName().trim(),
+          emoji: soundEmoji().trim() || undefined,
+          fileId,
+        });
+      } else {
+        const srv = server();
+        if (!srv) throw new Error("no hay servidor activo");
+        const channel = await findOrCreateSoundboardChannel(srv);
+        const sound = await addServerSound(channel, {
+          name: soundName().trim(),
+          emoji: soundEmoji().trim() || undefined,
+          fileId,
+        });
+        setServerSounds((prev) => [...prev, sound]);
+      }
+
+      setAdding(undefined);
       setPendingFile(undefined);
     } catch (e) {
       console.error("[soundboard] no se pudo subir el sonido:", e);
       setError(t`No se pudo subir el sonido`);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function removeServer(sound: ServerSound) {
+    const srv = server();
+    const channel = srv && findSoundboardChannel(srv);
+    if (!channel) return;
+
+    try {
+      await removeServerSound(channel, sound.messageId);
+      setServerSounds((prev) =>
+        prev.filter((s) => s.messageId !== sound.messageId),
+      );
+    } catch (e) {
+      console.error("[soundboard] no se pudo eliminar el sonido:", e);
+      setServerBoardError(t`No se pudo eliminar el sonido`);
     }
   }
 
@@ -168,7 +257,7 @@ function SoundboardPanel(props: {
                 <Button
                   variant="outlined"
                   onPress={() => {
-                    setAdding(false);
+                    setAdding(undefined);
                     setPendingFile(undefined);
                   }}
                 >
@@ -185,43 +274,97 @@ function SoundboardPanel(props: {
             </AddForm>
           }
         >
-          <Header>
-            <Trans>Mi soundboard</Trans>
-          </Header>
-          <Show when={error()}>
-            <ErrorText>{error()}</ErrorText>
-          </Show>
-          <Grid>
-            <For each={state.soundboard.personalSounds}>
-              {(sound) => (
-                <SoundTile>
-                  <SoundTileButton onClick={() => play(sound)}>
-                    <span>{sound.emoji ?? "🔊"}</span>
-                    <SoundName>{sound.name}</SoundName>
-                  </SoundTileButton>
-                  <RemoveButton
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation();
-                      state.soundboard.removeSound(sound.id);
-                    }}
-                    title={t`Eliminar`}
-                  >
-                    <Symbol>close</Symbol>
-                  </RemoveButton>
-                </SoundTile>
-              )}
-            </For>
-            <AddTile onClick={() => fileInput?.click()} title={t`Añadir sonido`}>
-              <Symbol>add</Symbol>
-            </AddTile>
-          </Grid>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="audio/*"
-            style={{ display: "none" }}
-            onChange={onFileChosen}
-          />
+          <Scroll>
+            <Header>
+              <Trans>Mi soundboard</Trans>
+            </Header>
+            <Grid>
+              <For each={state.soundboard.personalSounds}>
+                {(sound: SoundboardSound) => (
+                  <SoundTile>
+                    <SoundTileButton onClick={() => play(sound)}>
+                      <span>{sound.emoji ?? "🔊"}</span>
+                      <SoundName>{sound.name}</SoundName>
+                    </SoundTileButton>
+                    <RemoveButton
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        state.soundboard.removeSound(sound.id);
+                      }}
+                      title={t`Eliminar`}
+                    >
+                      <Symbol>close</Symbol>
+                    </RemoveButton>
+                  </SoundTile>
+                )}
+              </For>
+              <AddTile
+                onClick={() => personalFileInput?.click()}
+                title={t`Añadir sonido`}
+              >
+                <Symbol>add</Symbol>
+              </AddTile>
+            </Grid>
+            <input
+              ref={personalFileInput}
+              type="file"
+              accept="audio/*"
+              style={{ display: "none" }}
+              onChange={onFileChosen("personal")}
+            />
+
+            <Show when={server()}>
+              <Header>
+                <Trans>Soundboard del servidor</Trans>
+              </Header>
+              <Show when={serverBoardError()}>
+                <ErrorText>{serverBoardError()}</ErrorText>
+              </Show>
+              <Show
+                when={!loadingServerSounds()}
+                fallback={<LoadingText>{t`Cargando…`}</LoadingText>}
+              >
+                <Grid>
+                  <For each={serverSounds()}>
+                    {(sound) => (
+                      <SoundTile>
+                        <SoundTileButton onClick={() => play(sound)}>
+                          <span>{sound.emoji ?? "🔊"}</span>
+                          <SoundName>{sound.name}</SoundName>
+                        </SoundTileButton>
+                        <Show when={canManageServerBoard()}>
+                          <RemoveButton
+                            onClick={(e: MouseEvent) => {
+                              e.stopPropagation();
+                              removeServer(sound);
+                            }}
+                            title={t`Eliminar`}
+                          >
+                            <Symbol>close</Symbol>
+                          </RemoveButton>
+                        </Show>
+                      </SoundTile>
+                    )}
+                  </For>
+                  <Show when={canManageServerBoard()}>
+                    <AddTile
+                      onClick={() => serverFileInput?.click()}
+                      title={t`Añadir sonido al servidor`}
+                    >
+                      <Symbol>add</Symbol>
+                    </AddTile>
+                  </Show>
+                </Grid>
+              </Show>
+              <input
+                ref={serverFileInput}
+                type="file"
+                accept="audio/*"
+                style={{ display: "none" }}
+                onChange={onFileChosen("server")}
+              />
+            </Show>
+          </Scroll>
         </Show>
       </Panel>
     </Portal>
@@ -235,11 +378,20 @@ const Panel = styled("div", {
     flexDirection: "column",
     gap: "var(--gap-sm)",
     width: "280px",
-    maxHeight: "360px",
+    maxHeight: "420px",
     padding: "var(--gap-md)",
     borderRadius: "var(--borderRadius-lg)",
     background: "var(--md-sys-color-surface-container-high)",
     boxShadow: "var(--elevation-3)",
+  },
+});
+
+const Scroll = styled("div", {
+  base: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "var(--gap-sm)",
+    overflowY: "auto",
   },
 });
 
@@ -252,12 +404,19 @@ const Header = styled("div", {
   },
 });
 
+const LoadingText = styled("div", {
+  base: {
+    fontSize: "0.8em",
+    color: "var(--md-sys-color-on-surface-variant)",
+    padding: "0 var(--gap-xs)",
+  },
+});
+
 const Grid = styled("div", {
   base: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
     gap: "var(--gap-sm)",
-    overflowY: "auto",
   },
 });
 
