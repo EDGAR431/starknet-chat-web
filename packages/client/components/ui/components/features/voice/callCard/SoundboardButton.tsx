@@ -45,20 +45,24 @@ export function SoundboardButton(props: { size: "xs" | "sm" }) {
 
   return (
     <>
-      <IconButton
-        ref={setAnchor}
-        size={props.size}
-        variant="standard"
-        onPress={() => setOpen((v) => !v)}
-        use:floating={{
-          tooltip: {
-            placement: "top",
-            content: t`Soundboard`,
-          },
-        }}
-      >
-        <Symbol>music_note</Symbol>
-      </IconButton>
+      {/* IconButton keeps its own internal ref and doesn't forward one, so
+          the anchor for the floating panel is this wrapper's DOM node
+          instead — it hugs the button's size since it stays inline. */}
+      <AnchorSpan ref={setAnchor}>
+        <IconButton
+          size={props.size}
+          variant="standard"
+          onPress={() => setOpen((v) => !v)}
+          use:floating={{
+            tooltip: {
+              placement: "top",
+              content: t`Soundboard`,
+            },
+          }}
+        >
+          <Symbol>music_note</Symbol>
+        </IconButton>
+      </AnchorSpan>
       <Show when={open()}>
         <SoundboardPanel anchor={anchor} onClose={() => setOpen(false)} />
       </Show>
@@ -370,6 +374,12 @@ function SoundboardPanel(props: {
     </Portal>
   );
 }
+
+const AnchorSpan = styled("span", {
+  base: {
+    display: "inline-flex",
+  },
+});
 
 const Panel = styled("div", {
   base: {
