@@ -1,5 +1,5 @@
 import type { Channel, Message, Server } from "stoat.js";
-import { SOUNDBOARD_CHANNEL_MARKER } from "stoat.js";
+import { Permission, SOUNDBOARD_CHANNEL_MARKER } from "stoat.js";
 
 /**
  * A sound on a server's shared soundboard. Backed by a single message in a
@@ -61,6 +61,14 @@ export function findSoundboardChannel(server: Server): Channel | undefined {
  * on the backend, matching the client-side gate already used to show the
  * "add sound" control, so this only ever runs for someone who could already
  * manage the server.
+ *
+ * A freshly-created channel has no permission overwrites of its own, so a
+ * brand new soundboard channel is immediately locked down: everyone keeps
+ * ViewChannel + ReadMessageHistory (so the board still loads for all
+ * members), but SendMessage/ManageMessages are denied for @everyone and
+ * re-granted only to roles that already carry ManageServer. This is
+ * enforced by the backend's own permission calculator — same as any other
+ * channel overwrite in a normal server — not just a client-side UI gate.
  */
 export async function findOrCreateSoundboardChannel(
   server: Server,
@@ -68,11 +76,41 @@ export async function findOrCreateSoundboardChannel(
   const existing = findSoundboardChannel(server);
   if (existing) return existing;
 
-  return server.createChannel({
+  const channel = await server.createChannel({
     type: "Text",
     name: "soundboard (no borrar)",
     description: SOUNDBOARD_CHANNEL_MARKER,
   });
+
+  await lockDownSoundboardChannel(channel, server);
+  return channel;
+}
+
+/**
+ * Apply (or re-apply) the permission overwrites that keep a soundboard
+ * channel manageable only by roles with ManageServer, while leaving it
+ * readable for everyone. Safe to call again later (e.g. if server roles
+ * change) — it just re-derives and re-sets the overwrites from scratch.
+ */
+export async function lockDownSoundboardChannel(
+  channel: Channel,
+  server: Server,
+): Promise<void> {
+  await channel.setPermissions("default", {
+    allow: Number(Permission.ViewChannel | Permission.ReadMessageHistory),
+    deny: Number(Permission.SendMessage | Permission.ManageMessages),
+  });
+
+  for (const [roleId, role] of server.roles) {
+    const hasManageServer =
+      (role.permissions.a & Permission.ManageServer) === Permission.ManageServer;
+    if (!hasManageServer) continue;
+
+    await channel.setPermissions(roleId, {
+      allow: Number(Permission.SendMessage | Permission.ManageMessages),
+      deny: 0,
+    });
+  }
 }
 
 /**

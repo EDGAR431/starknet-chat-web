@@ -19,6 +19,7 @@ import {
   fetchServerSounds,
   findOrCreateSoundboardChannel,
   findSoundboardChannel,
+  lockDownSoundboardChannel,
   removeServerSound,
   type ServerSound,
 } from "@revolt/rtc/serverSoundboard";
@@ -118,6 +119,18 @@ function SoundboardPanel(props: {
       // Nadie ha añadido un sonido a este servidor todavía.
       setServerSounds([]);
       return;
+    }
+
+    // Re-sincroniza los permisos del canal oculto por si se creó antes de
+    // que existiera este bloqueo, o si los roles del servidor cambiaron
+    // desde la última vez. Silencioso: no debe bloquear la carga del panel.
+    if (canManageServerBoard()) {
+      lockDownSoundboardChannel(channel, srv).catch((e) =>
+        console.error(
+          "[soundboard] no se pudieron re-sincronizar los permisos del canal:",
+          e,
+        ),
+      );
     }
 
     setLoadingServerSounds(true);
