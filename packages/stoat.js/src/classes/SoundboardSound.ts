@@ -92,6 +92,14 @@ export class SoundboardSound {
   }
 
   /**
+   * Whether this is one of the permanent starter-pack sounds, which can
+   * never be deleted
+   */
+  get isDefault(): boolean {
+    return this.#collection.getUnderlyingObject(this.id).isDefault;
+  }
+
+  /**
    * URL to download/play the sound's audio file
    */
   get url(): string | undefined {

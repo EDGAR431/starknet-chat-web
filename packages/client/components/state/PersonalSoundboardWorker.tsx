@@ -37,6 +37,7 @@ export function PersonalSoundboardWorker() {
         emoji: sound.emoji,
         fileId: sound.fileId,
         volume: sound.volume,
+        isDefault: sound.isDefault,
       });
     }
   }

@@ -150,6 +150,7 @@ function SoundboardPanel(props: {
                     emoji: event.emoji,
                     fileId: event.file_id,
                     volume: event.volume,
+                    isDefault: event.is_default,
                   },
                 ],
           );
@@ -329,15 +330,17 @@ function SoundboardPanel(props: {
                       <span>{sound.emoji ?? "🔊"}</span>
                       <SoundName>{sound.name}</SoundName>
                     </SoundTileButton>
-                    <RemoveButton
-                      onClick={(e: MouseEvent) => {
-                        e.stopPropagation();
-                        removePersonal(sound.id);
-                      }}
-                      title={t`Eliminar`}
-                    >
-                      <Symbol>close</Symbol>
-                    </RemoveButton>
+                    <Show when={!sound.isDefault}>
+                      <RemoveButton
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation();
+                          removePersonal(sound.id);
+                        }}
+                        title={t`Eliminar`}
+                      >
+                        <Symbol>close</Symbol>
+                      </RemoveButton>
+                    </Show>
                   </SoundTile>
                 )}
               </For>
@@ -375,7 +378,7 @@ function SoundboardPanel(props: {
                           <span>{sound.emoji ?? "🔊"}</span>
                           <SoundName>{sound.name}</SoundName>
                         </SoundTileButton>
-                        <Show when={canManageServerBoard()}>
+                        <Show when={canManageServerBoard() && !sound.isDefault}>
                           <RemoveButton
                             onClick={(e: MouseEvent) => {
                               e.stopPropagation();

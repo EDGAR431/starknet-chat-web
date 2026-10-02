@@ -26,6 +26,7 @@ export type APISoundboardSound = {
   emoji?: string;
   file_id: string;
   volume: number;
+  is_default: boolean;
 };
 
 export type HydratedSoundboardSound = {
@@ -36,6 +37,7 @@ export type HydratedSoundboardSound = {
   emoji?: string;
   fileId: string;
   volume: number;
+  isDefault: boolean;
 };
 
 export const soundboardSoundHydration: Hydrate<
@@ -46,6 +48,7 @@ export const soundboardSoundHydration: Hydrate<
     _id: "id",
     creator_id: "creatorId",
     file_id: "fileId",
+    is_default: "isDefault",
   },
   functions: {
     id: (sound) => sound._id,
@@ -55,6 +58,7 @@ export const soundboardSoundHydration: Hydrate<
     emoji: (sound) => sound.emoji,
     fileId: (sound) => sound.file_id,
     volume: (sound) => (typeof sound.volume === "number" ? sound.volume : 100),
+    isDefault: (sound) => !!sound.is_default,
   },
   initialHydration: () => ({}),
 };

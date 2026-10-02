@@ -37,6 +37,12 @@ export interface SoundboardSound {
    * backend's integer-percentage scale.
    */
   volume: number;
+
+  /**
+   * Whether this is one of the permanent starter-pack sounds, which can
+   * never be deleted.
+   */
+  isDefault: boolean;
 }
 
 export interface TypeSoundboard {
@@ -113,6 +119,7 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
             typeof sound.volume === "number"
               ? Math.min(200, Math.max(0, sound.volume))
               : 100,
+          isDefault: !!sound.isDefault,
         }))
         // A soundboard with hundreds of entries stops being usable during a
         // call anyway, so cap it generously rather than let it grow forever.
@@ -175,6 +182,7 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
       emoji: created.emoji,
       fileId: created.fileId,
       volume: created.volume,
+      isDefault: created.isDefault,
     };
 
     this.cacheSound(entry);

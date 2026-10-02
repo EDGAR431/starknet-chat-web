@@ -14,6 +14,8 @@ export interface ServerSound {
   emoji?: string;
   fileId: string;
   volume: number;
+  /** Whether this is a permanent starter-pack sound, which can never be deleted */
+  isDefault: boolean;
 }
 
 function toServerSound(sound: SoundboardSound): ServerSound {
@@ -23,6 +25,7 @@ function toServerSound(sound: SoundboardSound): ServerSound {
     emoji: sound.emoji,
     fileId: sound.fileId,
     volume: sound.volume,
+    isDefault: sound.isDefault,
   };
 }
 
