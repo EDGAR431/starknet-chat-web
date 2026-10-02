@@ -15,6 +15,7 @@ export * from "./Server.js";
 export * from "./ServerBan.js";
 export * from "./ServerMember.js";
 export * from "./Session.js";
+export * from "./SoundboardSound.js";
 export * from "./SystemMessage.js";
 export * from "./User.js";
 export * from "./MFA.js";

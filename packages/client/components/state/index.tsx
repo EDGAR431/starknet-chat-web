@@ -41,6 +41,7 @@ export type { ResolvedEntry } from "./stores/Ordering";
 export type { ServerFolder } from "./stores/ServerFolders";
 export type { SoundboardSound, TypeSoundboard } from "./stores/Soundboard";
 export type { Sounds, TypeSounds } from "./stores/Sounds";
+export { PersonalSoundboardWorker } from "./PersonalSoundboardWorker";
 export { SyncWorker } from "./SyncWorker";
 
 /**

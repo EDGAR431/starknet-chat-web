@@ -42,12 +42,21 @@ import { User } from "./User.js";
 import { VoiceStatus } from "./VoiceParticipant.js";
 
 /**
- * Marker written to a channel's description to identify it as the
- * per-server soundboard's data store — a normal text channel used to hold
- * one message per sound (JSON metadata + the audio as its attachment),
- * since there is no backend soundboard API to build this on. Channels
- * carrying this marker are filtered out of `orderedChannels` so they never
- * show up in the regular channel list.
+ * LEGACY — kept only so pre-existing hidden channels stay hidden.
+ *
+ * Marker that used to be written to a channel's description to identify it
+ * as the per-server soundboard's data store, back when there was no
+ * backend soundboard API: a normal text channel held one message per sound
+ * (JSON metadata + the audio as its attachment). The soundboard now uses
+ * the real `/soundboard/*` backend routes (see `client.soundboardSounds`)
+ * and no longer creates channels like this.
+ *
+ * Any such channel created before that change still physically exists,
+ * with its messages intact, so this marker and the `orderedChannels`
+ * filter below are kept purely to avoid those old channels suddenly
+ * reappearing in the regular channel list. Whether to also migrate the
+ * sounds in them into the real soundboard API (or otherwise clean them up)
+ * is a product decision, not made by this change.
  */
 export const SOUNDBOARD_CHANNEL_MARKER = "__starknet_soundboard__";
 

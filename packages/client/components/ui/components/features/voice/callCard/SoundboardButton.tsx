@@ -12,14 +12,13 @@ import { styled } from "styled-system/jsx";
 
 import { Trans, useLingui } from "@lingui/solid/macro";
 
+import type { ProtocolV1 } from "stoat.js";
+
 import { useClient } from "@revolt/client";
 import { useVoice } from "@revolt/rtc";
 import {
   addServerSound,
   fetchServerSounds,
-  findOrCreateSoundboardChannel,
-  findSoundboardChannel,
-  lockDownSoundboardChannel,
   removeServerSound,
   type ServerSound,
 } from "@revolt/rtc/serverSoundboard";
@@ -34,10 +33,10 @@ import { Symbol } from "@revolt/ui/components/utils/Symbol";
  * anyone else in the call just hears them as normal voice — no separate
  * realtime protocol involved.
  *
- * Two boards are shown: the personal one (synced across this account's
- * devices) and, when the call is a server voice channel, that server's
- * shared board (stored as messages in a hidden channel — see
- * @revolt/rtc/serverSoundboard for why).
+ * Two boards are shown: the personal one (this account's own sounds) and,
+ * when the call is a server voice channel, that server's shared board.
+ * Both are backed by the real backend `/soundboard/*` routes — see
+ * @revolt/rtc/serverSoundboard and @revolt/state's Soundboard store.
  */
 export function SoundboardButton(props: { size: "xs" | "sm" }) {
   const { t } = useLingui();
@@ -98,10 +97,13 @@ function SoundboardPanel(props: {
   onCleanup(() => document.removeEventListener("mousedown", onMouseDown));
 
   // El servidor de la llamada actual, si es un canal de voz de servidor
-  // (en una DM/grupo no hay soundboard compartido).
+  // (en una DM/grupo no hay soundboard compartido). Crear/quitar sonidos
+  // del servidor requiere ManageCustomisation (igual que el resto de
+  // personalización del servidor: emojis, etc.) — lo exige el backend,
+  // esto solo refleja esa misma regla en la interfaz.
   const server = () => voice.channel()?.server;
   const canManageServerBoard = () =>
-    server()?.havePermission("ManageServer") ?? false;
+    server()?.havePermission("ManageCustomisation") ?? false;
 
   const [serverSounds, setServerSounds] = createSignal<ServerSound[]>([]);
   const [loadingServerSounds, setLoadingServerSounds] = createSignal(false);
@@ -114,27 +116,8 @@ function SoundboardPanel(props: {
       return;
     }
 
-    const channel = findSoundboardChannel(srv);
-    if (!channel) {
-      // Nadie ha añadido un sonido a este servidor todavía.
-      setServerSounds([]);
-      return;
-    }
-
-    // Re-sincroniza los permisos del canal oculto por si se creó antes de
-    // que existiera este bloqueo, o si los roles del servidor cambiaron
-    // desde la última vez. Silencioso: no debe bloquear la carga del panel.
-    if (canManageServerBoard()) {
-      lockDownSoundboardChannel(channel, srv).catch((e) =>
-        console.error(
-          "[soundboard] no se pudieron re-sincronizar los permisos del canal:",
-          e,
-        ),
-      );
-    }
-
     setLoadingServerSounds(true);
-    fetchServerSounds(channel)
+    fetchServerSounds(client(), srv)
       .then(setServerSounds)
       .catch((e) => {
         console.error(
@@ -145,6 +128,45 @@ function SoundboardPanel(props: {
       })
       .finally(() => setLoadingServerSounds(false));
   });
+
+  // Mantiene el tablero del servidor al día en vivo: si alguien más añade o
+  // quita un sonido mientras este panel está abierto, se refleja sin
+  // necesidad de volver a pedirlos todos.
+  function handleRealtimeEvent(event: ProtocolV1["server"]) {
+    const srv = server();
+    if (!srv) return;
+
+    switch (event.type) {
+      case "SoundboardSoundCreate": {
+        if (event.parent.type === "Server" && event.parent.id === srv.id) {
+          setServerSounds((prev) =>
+            prev.some((s) => s.id === event._id)
+              ? prev
+              : [
+                  ...prev,
+                  {
+                    id: event._id,
+                    name: event.name,
+                    emoji: event.emoji,
+                    fileId: event.file_id,
+                    volume: event.volume,
+                  },
+                ],
+          );
+        }
+        break;
+      }
+      case "SoundboardSoundDelete": {
+        setServerSounds((prev) => prev.filter((s) => s.id !== event.id));
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  client().events.addListener("event", handleRealtimeEvent);
+  onCleanup(() => client().events.removeListener("event", handleRealtimeEvent));
 
   const [adding, setAdding] = createSignal<Scope>();
   const [pendingFile, setPendingFile] = createSignal<File>();
@@ -195,7 +217,7 @@ function SoundboardPanel(props: {
       const fileId = await client().uploadFile("attachments", file);
 
       if (scope === "personal") {
-        state.soundboard.addSound({
+        await state.soundboard.addSound(client(), {
           name: soundName().trim(),
           emoji: soundEmoji().trim() || undefined,
           fileId,
@@ -203,13 +225,14 @@ function SoundboardPanel(props: {
       } else {
         const srv = server();
         if (!srv) throw new Error("no hay servidor activo");
-        const channel = await findOrCreateSoundboardChannel(srv);
-        const sound = await addServerSound(channel, {
+        const sound = await addServerSound(client(), srv, {
           name: soundName().trim(),
           emoji: soundEmoji().trim() || undefined,
           fileId,
         });
-        setServerSounds((prev) => [...prev, sound]);
+        setServerSounds((prev) =>
+          prev.some((s) => s.id === sound.id) ? prev : [...prev, sound],
+        );
       }
 
       setAdding(undefined);
@@ -223,18 +246,21 @@ function SoundboardPanel(props: {
   }
 
   async function removeServer(sound: ServerSound) {
-    const srv = server();
-    const channel = srv && findSoundboardChannel(srv);
-    if (!channel) return;
-
     try {
-      await removeServerSound(channel, sound.messageId);
-      setServerSounds((prev) =>
-        prev.filter((s) => s.messageId !== sound.messageId),
-      );
+      await removeServerSound(client(), sound.id);
+      setServerSounds((prev) => prev.filter((s) => s.id !== sound.id));
     } catch (e) {
       console.error("[soundboard] no se pudo eliminar el sonido:", e);
       setServerBoardError(t`No se pudo eliminar el sonido`);
+    }
+  }
+
+  async function removePersonal(id: string) {
+    try {
+      await state.soundboard.removeSound(client(), id);
+    } catch (e) {
+      console.error("[soundboard] no se pudo eliminar el sonido:", e);
+      setError(t`No se pudo eliminar el sonido`);
     }
   }
 
@@ -306,7 +332,7 @@ function SoundboardPanel(props: {
                     <RemoveButton
                       onClick={(e: MouseEvent) => {
                         e.stopPropagation();
-                        state.soundboard.removeSound(sound.id);
+                        removePersonal(sound.id);
                       }}
                       title={t`Eliminar`}
                     >

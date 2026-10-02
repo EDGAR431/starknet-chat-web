@@ -1,165 +1,77 @@
-import type { Channel, Message, Server } from "stoat.js";
-import { Permission, SOUNDBOARD_CHANNEL_MARKER } from "stoat.js";
+import type { Client, Server, SoundboardSound } from "stoat.js";
 
 /**
- * A sound on a server's shared soundboard. Backed by a single message in a
- * hidden channel (see SOUNDBOARD_CHANNEL_MARKER) — the message's content is
- * this JSON metadata and its one attachment is the audio itself. There is
- * no soundboard API on the Stoat backend, so this reuses the ordinary
- * messaging/attachment primitives as storage rather than inventing one.
+ * A sound on a server's shared soundboard, in the shape the soundboard UI
+ * already expects. Backed by the real `/soundboard/*` backend routes
+ * (Server-parented sounds) — this used to be a hidden text channel full of
+ * one message per sound (see git history before this file's current
+ * version for that hack), but the backend now has a proper soundboard API.
  */
 export interface ServerSound {
-  /** ID of the message backing this sound — needed to delete it later */
-  messageId: string;
+  /** Backend id of the sound — needed to delete it later */
+  id: string;
   name: string;
   emoji?: string;
   fileId: string;
   volume: number;
 }
 
-const MESSAGE_MARKER = "starknet-soundboard-sound";
-
-function parseSoundMessage(message: Message): ServerSound | undefined {
-  const attachment = message.attachments?.[0];
-  if (!attachment) return undefined;
-
-  let data: { type?: string; name?: string; emoji?: string; volume?: number };
-  try {
-    data = JSON.parse(message.content ?? "");
-  } catch {
-    return undefined;
-  }
-
-  if (data.type !== MESSAGE_MARKER || typeof data.name !== "string") {
-    return undefined;
-  }
-
+function toServerSound(sound: SoundboardSound): ServerSound {
   return {
-    messageId: message.id,
-    name: data.name.slice(0, 32),
-    emoji: typeof data.emoji === "string" ? data.emoji : undefined,
-    fileId: attachment.id,
-    volume:
-      typeof data.volume === "number"
-        ? Math.min(2, Math.max(0, data.volume))
-        : 1.0,
+    id: sound.id,
+    name: sound.name,
+    emoji: sound.emoji,
+    fileId: sound.fileId,
+    volume: sound.volume,
   };
 }
 
 /**
- * Find this server's hidden soundboard channel, if it has one yet.
- */
-export function findSoundboardChannel(server: Server): Channel | undefined {
-  return server.channels.find(
-    (channel) => channel.description === SOUNDBOARD_CHANNEL_MARKER,
-  );
-}
-
-/**
- * Find the server's soundboard channel, creating it the first time anyone
- * adds a sound. Channel creation itself requires ManageChannel/ManageServer
- * on the backend, matching the client-side gate already used to show the
- * "add sound" control, so this only ever runs for someone who could already
- * manage the server.
- *
- * A freshly-created channel has no permission overwrites of its own, so a
- * brand new soundboard channel is immediately locked down: everyone keeps
- * ViewChannel + ReadMessageHistory (so the board still loads for all
- * members), but SendMessage/ManageMessages are denied for @everyone and
- * re-granted only to roles that already carry ManageServer. This is
- * enforced by the backend's own permission calculator — same as any other
- * channel overwrite in a normal server — not just a client-side UI gate.
- */
-export async function findOrCreateSoundboardChannel(
-  server: Server,
-): Promise<Channel> {
-  const existing = findSoundboardChannel(server);
-  if (existing) return existing;
-
-  const channel = await server.createChannel({
-    type: "Text",
-    name: "soundboard (no borrar)",
-    description: SOUNDBOARD_CHANNEL_MARKER,
-  });
-
-  await lockDownSoundboardChannel(channel, server);
-  return channel;
-}
-
-/**
- * Apply (or re-apply) the permission overwrites that keep a soundboard
- * channel manageable only by roles with ManageServer, while leaving it
- * readable for everyone. Safe to call again later (e.g. if server roles
- * change) — it just re-derives and re-sets the overwrites from scratch.
- */
-export async function lockDownSoundboardChannel(
-  channel: Channel,
-  server: Server,
-): Promise<void> {
-  await channel.setPermissions("default", {
-    allow: Number(Permission.ViewChannel | Permission.ReadMessageHistory),
-    deny: Number(Permission.SendMessage | Permission.ManageMessages),
-  });
-
-  for (const [roleId, role] of server.roles) {
-    const hasManageServer =
-      (role.permissions.a & Permission.ManageServer) === Permission.ManageServer;
-    if (!hasManageServer) continue;
-
-    await channel.setPermissions(roleId, {
-      allow: Number(Permission.SendMessage | Permission.ManageMessages),
-      deny: 0,
-    });
-  }
-}
-
-/**
- * Fetch every sound currently on a server's soundboard, oldest (first
- * added) first.
+ * Fetch every sound currently on a server's soundboard.
+ * @param client Client
+ * @param server Server
  */
 export async function fetchServerSounds(
-  channel: Channel,
+  client: Client,
+  server: Server,
 ): Promise<ServerSound[]> {
-  const messages = await channel.fetchMessages({ limit: 100 });
-  return messages
-    .map(parseSoundMessage)
-    .filter((sound): sound is ServerSound => !!sound)
-    .reverse();
+  const sounds = await client.soundboardSounds.fetchForServer(server.id);
+  return sounds.map(toServerSound);
 }
 
 /**
- * Add a sound to a server's soundboard.
- * @param channel The server's soundboard channel
+ * Add a sound to a server's soundboard. Requires ManageCustomisation on
+ * the server — enforced by the backend, and gated the same way in the UI
+ * before this is ever called (see SoundboardButton.tsx).
+ * @param client Client
+ * @param server Server
  * @param sound Name, optional emoji, and the already-uploaded Autumn file ID
  */
 export async function addServerSound(
-  channel: Channel,
+  client: Client,
+  server: Server,
   sound: { name: string; emoji?: string; fileId: string },
 ): Promise<ServerSound> {
-  const message = await channel.sendMessage({
-    content: JSON.stringify({
-      type: MESSAGE_MARKER,
-      name: sound.name,
-      emoji: sound.emoji,
-      volume: 1.0,
-    }),
-    attachments: [sound.fileId],
+  const created = await client.soundboardSounds.createSound({
+    name: sound.name,
+    parent: { type: "Server", id: server.id },
+    fileId: sound.fileId,
+    emoji: sound.emoji,
   });
 
-  const parsed = parseSoundMessage(message);
-  if (!parsed) {
-    throw new Error("No se pudo interpretar el sonido recién añadido");
-  }
-  return parsed;
+  return toServerSound(created);
 }
 
 /**
- * Remove a sound from a server's soundboard.
+ * Remove a sound from a server's soundboard. Creator or (for this,
+ * Server-parented sound) ManageCustomisation may delete — enforced by the
+ * backend.
+ * @param client Client
+ * @param soundId Sound id
  */
 export async function removeServerSound(
-  channel: Channel,
-  messageId: string,
+  client: Client,
+  soundId: string,
 ): Promise<void> {
-  const message = await channel.fetchMessage(messageId);
-  await message.delete();
+  await client.soundboardSounds.deleteSound(soundId);
 }

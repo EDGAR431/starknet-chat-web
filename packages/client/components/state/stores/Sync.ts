@@ -12,7 +12,6 @@ import { TypeNotificationOptions } from "./NotificationOptions";
 import { TypeOrdering } from "./Ordering";
 import { TypeReleaseNotes } from "./ReleaseNotes";
 import { TypeSettings } from "./Settings";
-import { TypeSoundboard } from "./Soundboard";
 import { TypeSounds } from "./Sounds";
 import { TypeTheme } from "./Theme";
 import { TypeVoice } from "./Voice";
@@ -25,7 +24,6 @@ type SynchronisedStores =
   | "theme"
   | "locale"
   | "sounds"
-  | "soundboard"
   | "voice"
   | "settings";
 
@@ -37,7 +35,6 @@ const STORE_KEYS: SynchronisedStores[] = [
   "theme",
   "locale",
   "sounds",
-  "soundboard",
   "voice",
   "settings",
 ];
@@ -46,12 +43,19 @@ const STORE_KEYS: SynchronisedStores[] = [
  * Categories the user can individually turn off from this device's sync —
  * the rest (ordering, notifications, release notes, server folders) always
  * synced already before this was introduced, so they stay on unconditionally.
+ *
+ * Personal soundboard sounds used to live here (as a "soundboard" blob
+ * synced through this same mechanism), back when there was no backend
+ * soundboard API. Now each sound has its own backend identity and
+ * lifecycle (create/delete calls, realtime events), so it is no longer a
+ * settings blob to sync this way — see SoundboardSounds.ts, which persists
+ * only this device's cache of sound ids locally (like "auth", it is
+ * registered as a store but intentionally left out of STORE_KEYS).
  */
 export const OPTIONAL_SYNC_CATEGORIES: SynchronisedStores[] = [
   "theme",
   "locale",
   "sounds",
-  "soundboard",
   "voice",
   "settings",
 ];
@@ -319,7 +323,6 @@ export class Sync extends AbstractStore<"sync", TypeSynchronisation> {
             TypeTheme &
             TypeLocale &
             TypeSounds &
-            TypeSoundboard &
             TypeVoice &
             TypeSettings,
         )

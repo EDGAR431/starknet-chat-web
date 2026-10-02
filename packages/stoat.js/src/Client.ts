@@ -9,6 +9,7 @@ import type { Channel } from "./classes/Channel.js";
 import type { Emoji } from "./classes/Emoji.js";
 import type { Message } from "./classes/Message.js";
 import type { Server } from "./classes/Server.js";
+import type { SoundboardSound } from "./classes/SoundboardSound.js";
 import type { ServerMember } from "./classes/ServerMember.js";
 import type { User, UserLimits } from "./classes/User.js";
 import { AccountCollection } from "./collections/AccountCollection.js";
@@ -21,6 +22,7 @@ import { MessageCollection } from "./collections/MessageCollection.js";
 import { ServerCollection } from "./collections/ServerCollection.js";
 import { ServerMemberCollection } from "./collections/ServerMemberCollection.js";
 import { SessionCollection } from "./collections/SessionCollection.js";
+import { SoundboardSoundCollection } from "./collections/SoundboardSoundCollection.js";
 import { UserCollection } from "./collections/UserCollection.js";
 import {
   ConnectionState,
@@ -32,6 +34,7 @@ import type { HydratedChannel } from "./hydration/channel.js";
 import type { HydratedEmoji } from "./hydration/emoji.js";
 import type { HydratedMessage } from "./hydration/message.js";
 import type { HydratedServer } from "./hydration/server.js";
+import type { HydratedSoundboardSound } from "./hydration/soundboardSound.js";
 import type { HydratedServerMember } from "./hydration/serverMember.js";
 import type { HydratedUser } from "./hydration/user.js";
 import {
@@ -99,6 +102,13 @@ export type Events = {
 
   emojiCreate: [emoji: Emoji];
   emojiDelete: [emoji: HydratedEmoji];
+
+  soundboardSoundCreate: [sound: SoundboardSound];
+  soundboardSoundUpdate: [
+    sound: SoundboardSound,
+    previousSound: HydratedSoundboardSound,
+  ];
+  soundboardSoundDelete: [sound: HydratedSoundboardSound];
 
   userSlowmodes: [];
 };
@@ -182,6 +192,7 @@ export class Client extends AsyncEventEmitter<Events> {
   readonly servers;
   readonly serverMembers;
   readonly sessions;
+  readonly soundboardSounds;
   readonly users;
 
   readonly api: API;
@@ -275,6 +286,7 @@ export class Client extends AsyncEventEmitter<Events> {
     this.servers = new ServerCollection(this);
     this.serverMembers = new ServerMemberCollection(this);
     this.sessions = new SessionCollection(this);
+    this.soundboardSounds = new SoundboardSoundCollection(this);
     this.users = new UserCollection(this);
 
     this.events = new EventClient(1, "json", this.options);

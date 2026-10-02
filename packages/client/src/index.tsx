@@ -29,7 +29,12 @@ import { InstanceContext } from "@revolt/instance";
 import { KeybindContext } from "@revolt/keybinds";
 import { ModalContext, ModalRenderer, useModals } from "@revolt/modal";
 import { VoiceContext } from "@revolt/rtc";
-import { StateContext, SyncWorker, useState } from "@revolt/state";
+import {
+  PersonalSoundboardWorker,
+  StateContext,
+  SyncWorker,
+  useState,
+} from "@revolt/state";
 import {
   FloatingManager,
   LoadTheme,
@@ -139,6 +144,7 @@ function MountContext(props: { children?: JSX.Element }) {
               </VoiceContext>
             </SoundContext>
             <SyncWorker />
+            <PersonalSoundboardWorker />
           </ClientContext>
         </ModalContext>
       </KeybindContext>

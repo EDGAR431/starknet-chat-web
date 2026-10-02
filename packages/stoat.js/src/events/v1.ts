@@ -25,6 +25,7 @@ import { MessageEmbed } from "../classes/MessageEmbed.js";
 import { ServerRole } from "../classes/ServerRole.js";
 import { VoiceParticipant } from "../classes/VoiceParticipant.js";
 import { hydrate } from "../hydration/index.js";
+import type { APISoundboardSound } from "../hydration/soundboardSound.js";
 
 /**
  * Version 1 of the events protocol
@@ -163,6 +164,13 @@ type ServerMessage =
   | { type: "UserPlatformWipe"; user_id: string; flags: number }
   | ({ type: "EmojiCreate" } & Emoji)
   | { type: "EmojiDelete"; id: string }
+  | ({ type: "SoundboardSoundCreate" } & APISoundboardSound)
+  | {
+      type: "SoundboardSoundUpdate";
+      id: string;
+      data: Partial<APISoundboardSound>;
+    }
+  | { type: "SoundboardSoundDelete"; id: string }
   | ({
       type: "Auth";
     } & (
@@ -986,6 +994,36 @@ export async function handleEvent(
         const emoji = client.emojis.getUnderlyingObject(event.id);
         client.emit("emojiDelete", emoji);
         client.emojis.delete(event.id);
+      }
+      break;
+    }
+    case "SoundboardSoundCreate": {
+      if (!client.soundboardSounds.has(event._id)) {
+        client.soundboardSounds.getOrCreate(event._id, event, true);
+      }
+      break;
+    }
+    case "SoundboardSoundUpdate": {
+      const sound = client.soundboardSounds.getOrPartial(event.id);
+      if (sound) {
+        const previousSound = {
+          ...client.soundboardSounds.getUnderlyingObject(event.id),
+        };
+
+        client.soundboardSounds.updateUnderlyingObject(
+          event.id,
+          hydrate("soundboardSound", event.data, client, false),
+        );
+
+        client.emit("soundboardSoundUpdate", sound, previousSound);
+      }
+      break;
+    }
+    case "SoundboardSoundDelete": {
+      if (client.soundboardSounds.getOrPartial(event.id)) {
+        const sound = client.soundboardSounds.getUnderlyingObject(event.id);
+        client.emit("soundboardSoundDelete", sound);
+        client.soundboardSounds.delete(event.id);
       }
       break;
     }

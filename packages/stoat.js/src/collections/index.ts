@@ -9,4 +9,5 @@ export { MessageCollection } from "./MessageCollection.js";
 export { ServerCollection } from "./ServerCollection.js";
 export { ServerMemberCollection } from "./ServerMemberCollection.js";
 export { SessionCollection } from "./SessionCollection.js";
+export { SoundboardSoundCollection } from "./SoundboardSoundCollection.js";
 export { UserCollection } from "./UserCollection.js";

@@ -1,17 +1,17 @@
-import { ulid } from "ulid";
+import type { Client, SoundboardSoundParent } from "stoat.js";
 
 import { State } from "..";
 
 import { AbstractStore } from ".";
 
 /**
- * A single sound in a soundboard.
+ * A single sound on a soundboard.
  */
 export interface SoundboardSound {
   /**
-   * Locally-generated stable ID for this sound (not a server-assigned ID —
-   * there is no soundboard API on the backend, this store IS the source of
-   * truth and syncs via the regular settings-sync mechanism).
+   * Backend-assigned id for this sound (from `POST /soundboard/sound`'s
+   * `_id`) — this is a real entity on the backend now, not a locally
+   * generated id.
    */
   id: string;
 
@@ -33,15 +33,26 @@ export interface SoundboardSound {
   fileId: string;
 
   /**
-   * Per-sound playback volume, 0 to 2 (1 = normal).
+   * Per-sound playback volume, 0 to 200 (100 = normal) — matches the
+   * backend's integer-percentage scale.
    */
   volume: number;
 }
 
 export interface TypeSoundboard {
   /**
-   * Sounds on this user's personal soundboard, usable in any DM or voice
-   * channel they join. Synced across this account's devices.
+   * Sounds on this user's personal (Detached) soundboard, usable in any DM
+   * or voice channel they join.
+   *
+   * This is this device's CACHE of the account's personal sounds, not the
+   * source of truth — the backend is, via `/soundboard/sound`. There is no
+   * "list my personal sounds" endpoint (personal sounds aren't tied to a
+   * server), so this list is built up from this device's own create/delete
+   * calls and from `SoundboardSoundCreate/Delete` events for this user's
+   * own sounds, rather than being fetched fresh on every login. A sound
+   * created from a device that has never had this cache populated (e.g. a
+   * fresh browser profile) only appears here once that device creates or
+   * is told about it over the websocket — see PersonalSoundboardWorker.
    */
   personalSounds: SoundboardSound[];
 
@@ -57,9 +68,12 @@ export interface TypeSoundboard {
  * other participant hears them exactly like normal voice, with no separate
  * realtime protocol needed.
  *
- * Per-server soundboards (shared with everyone in a server) are a separate
- * concern, stored differently since they aren't account-specific — see
- * `ServerSoundboard` (tracked as a follow-up).
+ * Backed by the real `/soundboard/sound` (Detached parent) backend routes.
+ * This store only keeps this device's local cache of the account's sounds
+ * (see `personalSounds`'s doc comment) — it is intentionally left out of
+ * Sync.ts's STORE_KEYS, the same way "auth" is: an entity with its own
+ * backend identity and lifecycle has no business being pushed around as a
+ * settings blob.
  */
 export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
   constructor(state: State) {
@@ -97,8 +111,8 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
           fileId: sound.fileId,
           volume:
             typeof sound.volume === "number"
-              ? Math.min(2, Math.max(0, sound.volume))
-              : 1.0,
+              ? Math.min(200, Math.max(0, sound.volume))
+              : 100,
         }))
         // A soundboard with hundreds of entries stops being usable during a
         // call anyway, so cap it generously rather than let it grow forever.
@@ -131,41 +145,58 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
   }
 
   /**
-   * Add a sound to the personal soundboard.
+   * Add a sound to the personal soundboard: creates it on the backend
+   * (Detached parent) first, then caches it locally on success.
+   * @param client Client
    * @param sound Name, optional emoji, Autumn file ID and volume
    * @returns The newly created sound
    */
-  addSound(sound: {
-    name: string;
-    emoji?: string;
-    fileId: string;
-    volume?: number;
-  }): SoundboardSound {
-    const entry: SoundboardSound = {
-      id: ulid(),
+  async addSound(
+    client: Client,
+    sound: {
+      name: string;
+      emoji?: string;
+      fileId: string;
+      volume?: number;
+    },
+  ): Promise<SoundboardSound> {
+    const parent: SoundboardSoundParent = { type: "Detached" };
+    const created = await client.soundboardSounds.createSound({
       name: sound.name.slice(0, 32),
-      emoji: sound.emoji,
+      parent,
       fileId: sound.fileId,
-      volume: sound.volume ?? 1.0,
+      emoji: sound.emoji,
+      volume: sound.volume,
+    });
+
+    const entry: SoundboardSound = {
+      id: created.id,
+      name: created.name,
+      emoji: created.emoji,
+      fileId: created.fileId,
+      volume: created.volume,
     };
 
-    this.set("personalSounds", [...this.get().personalSounds, entry]);
+    this.cacheSound(entry);
     return entry;
   }
 
   /**
-   * Remove a sound from the personal soundboard.
+   * Remove a sound from the personal soundboard: deletes it on the backend
+   * first, then drops it from the local cache on success.
+   * @param client Client
    * @param id Sound ID
    */
-  removeSound(id: string) {
-    this.set(
-      "personalSounds",
-      this.get().personalSounds.filter((sound) => sound.id !== id),
-    );
+  async removeSound(client: Client, id: string): Promise<void> {
+    await client.soundboardSounds.deleteSound(id);
+    this.uncacheSound(id);
   }
 
   /**
-   * Rename a sound or change its emoji/volume.
+   * Rename a sound or change its emoji/volume. Local-cache only for now —
+   * there is no `PATCH /soundboard/sound/<id>` call from this client yet,
+   * this just keeps the cache consistent if the backend pushes an update
+   * (see PersonalSoundboardWorker).
    * @param id Sound ID
    * @param patch Fields to update
    */
@@ -178,6 +209,34 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
       this.get().personalSounds.map((sound) =>
         sound.id === id ? { ...sound, ...patch } : sound,
       ),
+    );
+  }
+
+  /**
+   * Add (or replace) a sound in this device's local cache without calling
+   * the backend — used both after this device's own `addSound` succeeds,
+   * and by PersonalSoundboardWorker when another session creates a
+   * personal sound and this device learns about it over the websocket.
+   * @param sound Sound to cache
+   */
+  cacheSound(sound: SoundboardSound) {
+    const existing = this.get().personalSounds;
+    const next = existing.some((s) => s.id === sound.id)
+      ? existing.map((s) => (s.id === sound.id ? sound : s))
+      : [...existing, sound];
+    this.set("personalSounds", next);
+  }
+
+  /**
+   * Drop a sound from this device's local cache without calling the
+   * backend — used both after this device's own `removeSound` succeeds,
+   * and by PersonalSoundboardWorker for a delete made elsewhere.
+   * @param id Sound ID
+   */
+  uncacheSound(id: string) {
+    this.set(
+      "personalSounds",
+      this.get().personalSounds.filter((sound) => sound.id !== id),
     );
   }
 }
