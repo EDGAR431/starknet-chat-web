@@ -14,6 +14,7 @@ import MdArrowBack from "@material-design-icons/svg/filled/arrow_back.svg?compon
 import { FlowTitle } from "./Flow";
 import { setFlowCheckEmail } from "./FlowCheck";
 import { Fields, Form } from "./Form";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 const BackAction = styled("div", {
   base: {
@@ -131,6 +132,7 @@ export default function FlowCreate() {
           </A>
         </BackAction>
       </Form>
+      <GoogleSignInButton />
       {import.meta.env.DEV && (
         <div
           style={{

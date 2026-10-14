@@ -13,6 +13,7 @@ import MdArrowBack from "@material-design-icons/svg/filled/arrow_back.svg?compon
 import { useState } from "@revolt/state";
 import { FlowTitle } from "./Flow";
 import { Fields, Form } from "./Form";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 /**
  * Flow for logging into an account
@@ -90,6 +91,7 @@ export default function FlowLogin() {
                 <Trans>Log in</Trans>
               </Button>
             </Form>
+            <GoogleSignInButton />
           </>
         }
       >
