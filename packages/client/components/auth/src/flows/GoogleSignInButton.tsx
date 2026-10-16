@@ -145,9 +145,20 @@ export function GoogleSignInButton() {
                 typeof login
               >[0],
               modals,
-            ).catch((err) => {
-              console.error("Google sign-in failed:", err);
-            });
+            )
+              .then(() => {
+                // The Google credential callback runs outside the app's
+                // normal click-driven flow (it's invoked by Google's own
+                // script, often after it tears down an internal iframe),
+                // and the reactive redirect that the email/password flow
+                // gets "for free" from the Switch/Match in FlowLogin
+                // doesn't reliably fire here. Force it, the same way a
+                // manual reload already does.
+                window.location.assign("/app");
+              })
+              .catch((err) => {
+                console.error("Google sign-in failed:", err);
+              });
           },
         });
 
