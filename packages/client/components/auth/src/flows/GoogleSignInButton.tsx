@@ -1,4 +1,4 @@
-import { Show, createSignal, onMount } from "solid-js";
+import { Show, createEffect, createSignal, onMount } from "solid-js";
 
 import { Trans } from "@lingui/solid/macro";
 import { styled } from "styled-system/jsx";
@@ -6,6 +6,8 @@ import { styled } from "styled-system/jsx";
 import { useClientLifecycle } from "@revolt/client";
 import { useInstance } from "@revolt/instance";
 import { useModals } from "@revolt/modal";
+import { useNavigate } from "@revolt/routing";
+import { useState } from "@revolt/state";
 import { Text } from "@revolt/ui";
 
 declare global {
@@ -113,8 +115,28 @@ const ButtonSlot = styled("div", {
  */
 export function GoogleSignInButton() {
   const { config } = useInstance();
-  const { login } = useClientLifecycle();
+  const { login, isLoggedIn } = useClientLifecycle();
   const modals = useModals();
+  const navigate = useNavigate();
+  const state = useState();
+
+  // Flips true once our own login() call resolves, so the effect below
+  // only fires the redirect for a login that happened on this screen —
+  // not on initial mount for some unrelated reason.
+  const [loggingIn, setLoggingIn] = createSignal(false);
+
+  // The session comes back from login() marked `valid: false` — it only
+  // becomes valid once the websocket finishes connecting (see
+  // Controller.ts: `markValid()` runs on `State.Connected`), and a session
+  // that isn't valid yet gets dropped on reload. So instead of navigating
+  // the moment login() resolves (too early — same bug as a hard reload
+  // racing the socket), wait for `isLoggedIn()` to actually flip, same
+  // signal the password flow's <Navigate> in FlowLogin reacts to.
+  createEffect(() => {
+    if (loggingIn() && isLoggedIn()) {
+      navigate(state.layout.popNextPath() ?? "/app", { replace: true });
+    }
+  });
 
   // `features.google` isn't in the generated `stoat-api` types yet, since
   // it's an addition specific to this fork's backend.
@@ -146,16 +168,7 @@ export function GoogleSignInButton() {
               >[0],
               modals,
             )
-              .then(() => {
-                // The Google credential callback runs outside the app's
-                // normal click-driven flow (it's invoked by Google's own
-                // script, often after it tears down an internal iframe),
-                // and the reactive redirect that the email/password flow
-                // gets "for free" from the Switch/Match in FlowLogin
-                // doesn't reliably fire here. Force it, the same way a
-                // manual reload already does.
-                window.location.assign("/app");
-              })
+              .then(() => setLoggingIn(true))
               .catch((err) => {
                 console.error("Google sign-in failed:", err);
               });
