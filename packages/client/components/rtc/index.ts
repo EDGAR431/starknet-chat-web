@@ -21,6 +21,13 @@ navigator.mediaDevices.getDisplayMedia = async function (opts) {
     };
   }
 
+  // Browser pickers: ask for the audio of the shared *window* only (not the
+  // whole system) when a window is picked. Unknown keys are ignored by
+  // browsers/Electron that do not support the hint.
+  if (opts && opts.audio) {
+    (opts as Record<string, unknown>).windowAudio = "window";
+  }
+
   const stream: MediaStream = await originalMediaCall.call(this, opts);
 
   if (opts && opts.audio && window.native?.isWayland?.()) {

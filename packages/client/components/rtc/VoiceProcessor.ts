@@ -31,6 +31,13 @@ export class VoiceProcessor implements TrackProcessor<
    */
   private soundboardBusNode?: GainNode;
 
+  private rnnoiseAvailable = false;
+  private watchdog?: ReturnType<typeof setInterval>;
+  private inputAnalyser?: AnalyserNode;
+  private outputAnalyser?: AnalyserNode;
+  /** Set when RNNoise produced silence from audible input: stay in bypass */
+  private rnnoiseBroken = false;
+
   private disposeSolidjsContext: () => void = () => {};
 
   constructor(voiceSettings: Voice) {
@@ -81,11 +88,42 @@ export class VoiceProcessor implements TrackProcessor<
   }
 
   async init(opts: AudioProcessorOptions): Promise<void> {
-    await RNNoiseNode.loadModule(
-      opts.audioContext,
-      CONFIGURATION.RNNOISE_WORKLET_CDN_URL,
-    );
+    await this.loadRnnoise(opts.audioContext);
     return this.build(opts);
+  }
+
+  /**
+   * Load the RNNoise worklet + wasm. Tries, in order: the configured CDN,
+   * the copy bundled with the app (same origin, so no dependency on an
+   * external CDN that may be blocked by a user's network/adblocker/CSP),
+   * and finally the library default. If everything fails the processor
+   * keeps working without noise suppression instead of muting the mic.
+   */
+  private async loadRnnoise(context: AudioContext): Promise<void> {
+    const bundled = new URL(
+      `${import.meta.env.BASE_URL ?? "/"}rnnoise/`.replace(/\/\/+/g, "/"),
+      window.location.origin,
+    ).href;
+
+    const candidates = [
+      CONFIGURATION.RNNOISE_WORKLET_CDN_URL,
+      bundled,
+      undefined, // library default CDN
+    ];
+
+    for (const cdn of candidates) {
+      if (cdn !== undefined && !cdn) continue;
+      try {
+        await RNNoiseNode.loadModule(context, cdn);
+        this.rnnoiseAvailable = true;
+        return;
+      } catch (err) {
+        console.warn("[voice] RNNoise load failed from", cdn ?? "default", err);
+      }
+    }
+
+    this.rnnoiseAvailable = false;
+    console.error("[voice] RNNoise unavailable, continuing without it");
   }
 
   async restart(opts: AudioProcessorOptions): Promise<void> {
@@ -100,21 +138,39 @@ export class VoiceProcessor implements TrackProcessor<
   }
 
   private updateNoiseSuppression(context: AudioContext) {
-    if (this.noiseSuppressionNode) {
-      this.compressorNode?.disconnect();
-      this.noiseSuppressionNode.disconnect();
-      this.highpassNode?.disconnect();
-      this.sourceNode?.disconnect();
+    // always detach the old chain, even when it was a plain bypass:
+    // otherwise the source stays wired straight to the gain node and the
+    // processed and unprocessed signals get summed (or never switch).
+    this.stopWatchdog();
+    this.compressorNode?.disconnect();
+    this.noiseSuppressionNode?.disconnect();
+    this.highpassNode?.disconnect();
+    this.sourceNode?.disconnect();
+    this.inputAnalyser?.disconnect();
+    this.outputAnalyser?.disconnect();
+
+    let node: RNNoiseNode | undefined;
+    if (
+      this.settings.noiseSupression === "enhanced" &&
+      this.rnnoiseAvailable &&
+      !this.rnnoiseBroken
+    ) {
+      try {
+        node = new RNNoiseNode(this.audioContext!);
+      } catch (err) {
+        console.error("[voice] could not create RNNoise node", err);
+        this.rnnoiseAvailable = false;
+      }
     }
 
-    if (this.settings.noiseSupression === "enhanced") {
+    if (node) {
       // Create a new highpass filter
       this.highpassNode = context.createBiquadFilter();
       this.highpassNode.type = "highpass";
       this.highpassNode.frequency.value = 50;
       this.highpassNode.Q.value = Math.SQRT1_2;
 
-      this.noiseSuppressionNode = new RNNoiseNode(this.audioContext!);
+      this.noiseSuppressionNode = node;
       this.highpassNode.connect(this.noiseSuppressionNode);
 
       // Create a new dynamics compressor
@@ -130,6 +186,15 @@ export class VoiceProcessor implements TrackProcessor<
       this.compressorNode.connect(this.gainNode!);
       // Lastly, connect the source to the highpass node to complete loop
       this.sourceNode!.connect(this.highpassNode);
+
+      // Watchdog: if the worklet never initialises (wasm blocked, etc.) it
+      // outputs pure silence. Detect that and fall back to bypass.
+      this.inputAnalyser = context.createAnalyser();
+      this.outputAnalyser = context.createAnalyser();
+      this.inputAnalyser.fftSize = this.outputAnalyser.fftSize = 1024;
+      this.sourceNode!.connect(this.inputAnalyser);
+      this.compressorNode.connect(this.outputAnalyser);
+      this.startWatchdog();
     } else {
       // Bypass noise suppression and remove all unused nodes
       this.compressorNode = undefined;
@@ -175,7 +240,41 @@ export class VoiceProcessor implements TrackProcessor<
     this.processedTrack = this.destinationNode.stream.getAudioTracks()[0];
   }
 
+  private rms(analyser: AnalyserNode): number {
+    const buf = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (const v of buf) sum += v * v;
+    return Math.sqrt(sum / buf.length);
+  }
+
+  private startWatchdog() {
+    let bad = 0;
+    this.watchdog = setInterval(() => {
+      if (!this.inputAnalyser || !this.outputAnalyser) return;
+      const input = this.rms(this.inputAnalyser);
+      const output = this.rms(this.outputAnalyser);
+      // audible mic input but dead-silent output => worklet is not running
+      if (input > 0.02 && output < 1e-6) bad++;
+      else if (output >= 1e-6) bad = 0;
+      if (bad >= 6) {
+        console.error("[voice] RNNoise output is silent, disabling it");
+        this.rnnoiseBroken = true;
+        this.stopWatchdog();
+        this.updateNoiseSuppression(this.audioContext!);
+      }
+    }, 500);
+  }
+
+  private stopWatchdog() {
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = undefined;
+  }
+
   private async teardown() {
+    this.stopWatchdog();
+    this.inputAnalyser?.disconnect();
+    this.outputAnalyser?.disconnect();
     this.sourceNode?.disconnect();
     this.highpassNode?.disconnect();
     this.noiseSuppressionNode?.disconnect();

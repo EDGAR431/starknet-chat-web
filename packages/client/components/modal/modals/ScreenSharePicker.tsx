@@ -5,7 +5,7 @@ import { useState } from "@revolt/state";
 import { ScreenShareQualityName } from "@revolt/state/stores/Voice";
 import { Avatar, Column, Dialog, DialogProps, Form2, Ripple } from "@revolt/ui";
 
-import { createMemo } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { styled } from "styled-system/jsx";
 import { Modals } from "../types";
 
@@ -94,6 +94,14 @@ export function ScreenSharePickerModal(
           <Form2.Checkbox control={group.controls.audio}>
             <Trans>Share audio</Trans>
           </Form2.Checkbox>
+          <Show when={window.native}>
+            <span style={{ "font-size": "0.8em", opacity: 0.7 }}>
+              <Trans>
+                Note: in the desktop app, shared audio includes all system
+                sound, not only the selected window.
+              </Trans>
+            </span>
+          </Show>
         </Column>
       </form>
     </Dialog>
