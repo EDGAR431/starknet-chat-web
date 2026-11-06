@@ -56,6 +56,7 @@ export function Titlebar() {
           initial={{ height: 0 }}
           animate={{ height: "29px" }}
           exit={{ height: 0 }}
+          style={{ overflow: "hidden", "flex-shrink": 0 }}
         >
           <Base disconnected={isDisconnected()}>
             <Title

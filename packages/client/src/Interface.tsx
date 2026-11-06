@@ -99,7 +99,14 @@ const Interface = (props: { children: JSX.Element }) => {
           <Match when={lifecycle.loadedOnce()}>
             <Layout
               disconnected={isDisconnected()}
-              style={{ "flex-grow": 1, "min-height": 0 }}
+              style={{
+                "flex-grow": 1,
+                "min-height": 0,
+                // In the desktop app (frameless window) everything below the
+                // custom titlebar must never be a window-drag region, or the
+                // header buttons (gear, back chevron...) stop receiving clicks.
+                "-webkit-app-region": "no-drag",
+              }}
               onDragOver={(e) => {
                 if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
               }}
