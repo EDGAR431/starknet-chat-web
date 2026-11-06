@@ -192,14 +192,17 @@ export function NotificationsWorker() {
       body = t`Sent ${message.attachments!.length} attachments`;
     }
 
-    // Don't continue if we don't have notification permissions
+    // The in-app ping must not depend on the OS notification permission
+    // (denied/blocked permission used to silence it completely).
+    sound.playSound("message");
+
+    // Don't show a desktop notification without permission
     if (
+      !("Notification" in window) ||
       Notification.permission !== "granted" ||
       state.settings.desktopNotificationsState !== "allowed"
     )
       return;
-
-    sound.playSound("message");
 
     const notification = new Notification(title!, {
       icon,

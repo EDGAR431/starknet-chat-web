@@ -57,6 +57,7 @@ export function CallRinger() {
 
   createEffect(() => {
     const call = incoming();
+    console.debug("[ringer] incoming call:", call);
     if (!call) return;
 
     const remaining = RING_TIMEOUT_MS - (Date.now() - call.since);

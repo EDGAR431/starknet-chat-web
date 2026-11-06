@@ -17,6 +17,29 @@ import userLeaveVoiceSound from "../../public/assets/sounds/user_leave_voice.ogg
 import userMovedSound from "../../public/assets/sounds/user_moved.ogg";
 
 /**
+ * Play an audio element. If the browser blocks it (autoplay policy: no user
+ * gesture yet), try again on the next click/key press instead of dropping it
+ * silently. Other failures are logged.
+ */
+function playWithRetry(node: HTMLAudioElement) {
+  node.play().catch((err: unknown) => {
+    if ((err as DOMException)?.name !== "NotAllowedError") {
+      console.warn("[sound] playback failed", err);
+      return;
+    }
+    const retry = () => {
+      document.removeEventListener("pointerdown", retry, true);
+      document.removeEventListener("keydown", retry, true);
+      // only if it is still wanted (loops are paused/cleared on stop)
+      if (node.loop && !node.getAttribute("src")) return;
+      node.play().catch(() => {});
+    };
+    document.addEventListener("pointerdown", retry, true);
+    document.addEventListener("keydown", retry, true);
+  });
+}
+
+/**
  * A controller class for making sure sounds are managed in one place and to prevent undesirable sound overlaps
  */
 export class SoundController {
@@ -136,7 +159,7 @@ export class SoundController {
     }
     this.lastPlayedSound = sound;
     // Browsers may block audio before the first user interaction; never throw.
-    this.node.play().catch(() => {});
+    playWithRetry(this.node);
     return true;
   }
 
@@ -160,7 +183,7 @@ export class SoundController {
     );
     node.loop = true;
     this.#loopNode = node;
-    node.play().catch(() => {});
+    playWithRetry(node);
     return true;
   }
 
