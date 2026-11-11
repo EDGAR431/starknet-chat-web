@@ -1,8 +1,14 @@
 import { createFormControl, createFormGroup } from "solid-forms";
-import { BiRegularArchive, BiSolidKey, BiSolidKeyboard } from "solid-icons/bi";
+import {
+  BiLogosGoogle,
+  BiRegularArchive,
+  BiSolidKey,
+  BiSolidKeyboard,
+} from "solid-icons/bi";
 import {
   For,
   Match,
+  Show,
   Switch,
   createEffect,
   createSignal,
@@ -11,6 +17,9 @@ import {
 
 import { Trans, useLingui } from "@lingui/solid/macro";
 import type { API } from "stoat.js";
+
+import { loadGoogleIdentityScript } from "@revolt/auth/src/flows/GoogleSignInButton";
+import { useClient } from "@revolt/client";
 
 import {
   CategoryButton,
@@ -25,6 +34,9 @@ import {
 import { useModals } from "..";
 import { Modals } from "../types";
 
+/** `Google` is specific to this fork's backend, not in the stoat-api types. */
+const GOOGLE = "Google" as unknown as API.MFAMethod;
+
 /**
  * Modal to create an MFA ticket
  */
@@ -33,6 +45,7 @@ export function MFAFlowModal(
 ) {
   const { t } = useLingui();
   const { showError } = useModals();
+  const client = useClient();
 
   // Keep track of available methods
   const [methods, setMethods] = createSignal<API.MFAMethod[] | undefined>(
@@ -56,11 +69,13 @@ export function MFAFlowModal(
     }
   });
 
-  // Always select first available method if only one available.
+  // Auto-select the method if there is only one real choice (recovery codes
+  // are a fallback); otherwise let the user pick, e.g. Password or Google.
   createEffect(() => {
     const list = methods();
     if (list) {
-      setSelected(list.find((entry) => entry !== "Recovery"));
+      const choices = list.filter((entry) => entry !== "Recovery");
+      setSelected(choices.length === 1 ? choices[0] : undefined);
     }
   });
 
@@ -88,6 +103,17 @@ export function MFAFlowModal(
           return;
       }
 
+      await finish(mfa_response);
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  /**
+   * Hand the response over: exchange it for a ticket or pass it up the chain
+   */
+  async function finish(mfa_response: API.MFAResponse) {
+    try {
       if (props.state === "known") {
         const ticket = await props.mfa.createTicket(mfa_response);
         props.callback(ticket);
@@ -100,6 +126,48 @@ export function MFAFlowModal(
       showError(error);
     }
   }
+
+  // Google: render Google's own button, then confirm with the fresh token.
+  let googleSlot: HTMLDivElement | undefined;
+  const [googleError, setGoogleError] = createSignal(false);
+
+  createEffect(() => {
+    if (selectedMethod() !== GOOGLE) return;
+
+    const clientId = (
+      client().configuration?.features as unknown as
+        | { google?: { enabled: boolean; client_id: string } }
+        | undefined
+    )?.google?.client_id;
+
+    if (!clientId) {
+      setGoogleError(true);
+      return;
+    }
+
+    loadGoogleIdentityScript()
+      .then(() => {
+        window.google!.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response) =>
+            finish({
+              google_id_token: response.credential,
+            } as unknown as API.MFAResponse),
+        });
+
+        if (googleSlot) {
+          window.google!.accounts.id.renderButton(googleSlot, {
+            type: "standard",
+            theme: "filled_black",
+            size: "large",
+            shape: "pill",
+            text: "continue_with",
+            width: 320,
+          });
+        }
+      })
+      .catch(() => setGoogleError(true));
+  });
 
   function onCancel() {
     props.callback();
@@ -120,6 +188,7 @@ export function MFAFlowModal(
   }
 
   function canSubmit() {
+    if (selectedMethod() === GOOGLE) return false;
     return (
       Form2.canSubmit(group) &&
       (group.controls.password.value ||
@@ -209,6 +278,31 @@ export function MFAFlowModal(
                     label={t`Password`}
                   />
                 </Match>
+                <Match when={selectedMethod() === GOOGLE}>
+                  <Text>
+                    <Show
+                      when={!googleError()}
+                      fallback={
+                        <Trans>
+                          Google confirmation is not available right now.
+                        </Trans>
+                      }
+                    >
+                      <Trans>
+                        Confirm with the same Google account you signed in
+                        with.
+                      </Trans>
+                    </Show>
+                  </Text>
+                  <div
+                    ref={googleSlot}
+                    style={{
+                      display: "flex",
+                      "justify-content": "center",
+                      "min-height": "40px",
+                    }}
+                  />
+                </Match>
                 <Match when={selectedMethod() === "Totp"}>
                   <Form2.TextField
                     name="totp_code"
@@ -243,6 +337,9 @@ export function MFAFlowModal(
                         <Match when={method === "Recovery"}>
                           <BiRegularArchive size={24} />
                         </Match>
+                        <Match when={method === GOOGLE}>
+                          <BiLogosGoogle size={24} />
+                        </Match>
                       </Switch>
                     }
                     onClick={() => {
@@ -262,6 +359,9 @@ export function MFAFlowModal(
                       </Match>
                       <Match when={method === "Recovery"}>
                         <Trans>Recovery Code</Trans>
+                      </Match>
+                      <Match when={method === GOOGLE}>
+                        <Trans>Google account</Trans>
                       </Match>
                     </Switch>
                   </CategoryButton>

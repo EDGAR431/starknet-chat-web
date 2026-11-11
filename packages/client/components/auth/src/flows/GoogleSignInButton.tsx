@@ -37,7 +37,7 @@ let gsiScriptPromise: Promise<void> | undefined;
  * Load Google Identity Services' script once, however many times this
  * component ends up mounted (login flow, create-account flow, ...).
  */
-function loadGoogleIdentityScript(): Promise<void> {
+export function loadGoogleIdentityScript(): Promise<void> {
   if (window.google?.accounts?.id) {
     return Promise.resolve();
   }
