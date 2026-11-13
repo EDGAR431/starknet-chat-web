@@ -111,9 +111,25 @@ export class VoiceProcessor implements TrackProcessor<
       undefined, // library default CDN
     ];
 
-    for (const cdn of candidates) {
+    for (let cdn of candidates) {
       if (cdn !== undefined && !cdn) continue;
+      // La librería exige la barra final; sin ella ignora la URL y usa su CDN
+      if (cdn && !cdn.endsWith("/")) cdn += "/";
       try {
+        // La librería no comprueba la respuesta: un 404 (o el index.html que
+        // devuelve una SPA con 200) se guardaría como "wasm" y el worklet
+        // quedaría mudo. Validamos aquí antes de cargarlo.
+        if (cdn) {
+          const resp = await fetch(cdn + "rnnoise.wasm");
+          const magic = new Uint8Array((await resp.arrayBuffer()).slice(0, 4));
+          const isWasm =
+            resp.ok &&
+            magic[0] === 0x00 &&
+            magic[1] === 0x61 &&
+            magic[2] === 0x73 &&
+            magic[3] === 0x6d;
+          if (!isWasm) throw new Error("rnnoise.wasm no válido en " + cdn);
+        }
         await RNNoiseNode.loadModule(context, cdn);
         this.rnnoiseAvailable = true;
         return;
