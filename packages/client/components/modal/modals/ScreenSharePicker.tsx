@@ -5,7 +5,7 @@ import { useState } from "@revolt/state";
 import { ScreenShareQualityName } from "@revolt/state/stores/Voice";
 import { Avatar, Column, Dialog, DialogProps, Form2, Ripple } from "@revolt/ui";
 
-import { createMemo, Show } from "solid-js";
+import { createMemo, createResource, Show } from "solid-js";
 import { styled } from "styled-system/jsx";
 import { Modals } from "../types";
 
@@ -14,6 +14,12 @@ export function ScreenSharePickerModal(
 ) {
   const { voice } = useState();
   const { t } = useLingui();
+
+  // En Windows 11 el audio compartido excluye la propia app; en el resto
+  // incluye las voces de la llamada y los espectadores oirían eco.
+  const [excludesApp] = createResource(
+    async () => (await window.native?.loopbackExcludesApp?.()) ?? true,
+  );
 
   const group = createFormGroup({
     qualityName: createFormControl<ScreenShareQualityName>(
@@ -94,6 +100,15 @@ export function ScreenSharePickerModal(
           <Form2.Checkbox control={group.controls.audio}>
             <Trans>Share audio</Trans>
           </Form2.Checkbox>
+          <Show when={window.native && excludesApp() === false}>
+            <span style={{ "font-size": "0.8em", color: "var(--md-sys-color-error)" }}>
+              <Trans>
+                Warning: on this system shared audio also includes the voices
+                of the call, so viewers may hear an echo. Use headphones or
+                turn off "Share audio".
+              </Trans>
+            </span>
+          </Show>
           <Show when={window.native}>
             <span style={{ "font-size": "0.8em", opacity: 0.7 }}>
               <Trans>

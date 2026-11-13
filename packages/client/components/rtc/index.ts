@@ -30,7 +30,7 @@ navigator.mediaDevices.getDisplayMedia = async function (opts) {
 
   const stream: MediaStream = await originalMediaCall.call(this, opts);
 
-  if (opts && opts.audio && window.native?.isWayland?.()) {
+  if (opts && opts.audio && (await window.native?.isWayland?.())) {
     const id = await getVirtmic();
 
     console.debug("Virt mic acquired:", id);

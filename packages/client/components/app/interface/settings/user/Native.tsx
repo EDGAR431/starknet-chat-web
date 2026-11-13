@@ -41,7 +41,9 @@ declare global {
         ) => void,
       ): void;
       screenPickerCallback(idx: number, audio: boolean): void;
-      isWayland?(): boolean;
+      isWayland?(): Promise<boolean>;
+      /** true si el audio compartido excluye las voces de la propia app (≥ 1.7) */
+      loopbackExcludesApp?(): Promise<boolean>;
       /** Reinicia la aplicación de escritorio por completo (versión ≥ 1.5.5) */
       relaunch?(): void;
     };
