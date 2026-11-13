@@ -972,7 +972,12 @@ class Voice {
           }
         }
       } catch (e) {
-        this.onErr(e);
+        // Cancelar el selector de pantalla no es un error: el navegador/Electron
+        // rechaza la promesa con NotAllowedError, NotFoundError o AbortError.
+        const name = (e as Error)?.name;
+        if (name !== "NotFoundError" && name !== "AbortError") {
+          this.onErr(e);
+        }
       }
     }
   }
