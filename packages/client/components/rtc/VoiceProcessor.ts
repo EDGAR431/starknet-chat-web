@@ -1,4 +1,5 @@
 import { AudioProcessorOptions, Track, TrackProcessor } from "livekit-client";
+import { DeepFilterNet3Core } from "deepfilternet3-noise-filter";
 import { RNNoiseNode } from "livekit-rnnoise-processor";
 import { createEffect, createRoot, on } from "solid-js";
 
@@ -15,7 +16,7 @@ export class VoiceProcessor implements TrackProcessor<
   private audioContext?: AudioContext;
   private settings: Voice;
 
-  private noiseSuppressionNode?: RNNoiseNode;
+  private noiseSuppressionNode?: AudioNode;
   private sourceNode?: MediaStreamAudioSourceNode;
   private highpassNode?: BiquadFilterNode;
   private compressorNode?: DynamicsCompressorNode;
@@ -32,6 +33,12 @@ export class VoiceProcessor implements TrackProcessor<
   private soundboardBusNode?: GainNode;
 
   private rnnoiseAvailable = false;
+
+  // DeepFilterNet3 (opcional, experimental)
+  private dfnCore?: DeepFilterNet3Core;
+  private dfnNode?: AudioWorkletNode;
+  private dfnAvailable = true;
+  private dfnBroken = false;
   private watchdog?: ReturnType<typeof setInterval>;
   private inputAnalyser?: AnalyserNode;
   private outputAnalyser?: AnalyserNode;
@@ -56,11 +63,12 @@ export class VoiceProcessor implements TrackProcessor<
           () => this.getSettings().noiseSupression,
           (newNoiseSuppresion, oldNoiseSuppression) => {
             // Only rebuild if noise supression has changed from enhanced to something else or vice versa
+            const isNeural = (v?: string) =>
+              v === "enhanced" || v === "deepfilter";
             if (
               oldNoiseSuppression &&
               oldNoiseSuppression !== newNoiseSuppresion &&
-              (newNoiseSuppresion === "enhanced" ||
-                oldNoiseSuppression === "enhanced")
+              (isNeural(newNoiseSuppresion) || isNeural(oldNoiseSuppression))
             ) {
               this.rebuild();
             }
@@ -83,12 +91,63 @@ export class VoiceProcessor implements TrackProcessor<
     }
   }
 
-  private rebuild() {
-    this.updateNoiseSuppression(this.audioContext!);
+  private async rebuild() {
+    const context = this.audioContext;
+    if (!context) return;
+    await this.prepareDeepFilter(context);
+    this.updateNoiseSuppression(context);
+  }
+
+  /**
+   * Prepara el nodo de DeepFilterNet3 si el usuario lo ha elegido. Si no se
+   * puede cargar (sin red al CDN, contexto que no es de 48 kHz...) se marca
+   * como no disponible y se usa RNNoise en su lugar.
+   */
+  private async prepareDeepFilter(context: AudioContext): Promise<void> {
+    if (this.settings.noiseSupression !== "deepfilter") return;
+    if (!this.dfnAvailable || this.dfnBroken || this.dfnNode) return;
+    if (context.sampleRate !== 48000) {
+      console.warn("[voice] DeepFilterNet3 necesita 48 kHz, usando RNNoise");
+      this.dfnAvailable = false;
+      return;
+    }
+    try {
+      if (!this.dfnCore) {
+        const bundled = new URL(
+          `${import.meta.env.BASE_URL ?? "/"}dfn3`.replace(/\/\/+/g, "/"),
+          window.location.origin,
+        ).href;
+        // Copia propia si existe (ver scripts/fetch-dfn3.sh); si no, el CDN
+        // por defecto de la librería.
+        let cdnUrl: string | undefined;
+        try {
+          const r = await fetch(`${bundled}/v3/pkg/df_bg.wasm`);
+          const m = new Uint8Array((await r.arrayBuffer()).slice(0, 4));
+          if (r.ok && m[0] === 0 && m[1] === 0x61 && m[2] === 0x73) {
+            cdnUrl = bundled;
+          }
+        } catch {
+          /* usar CDN por defecto */
+        }
+        const core = new DeepFilterNet3Core({
+          sampleRate: 48000,
+          noiseReductionLevel: 80,
+          assetConfig: cdnUrl ? { cdnUrl } : undefined,
+        });
+        await core.initialize();
+        this.dfnCore = core;
+      }
+      this.dfnNode = await this.dfnCore.createAudioWorkletNode(context);
+    } catch (err) {
+      console.error("[voice] DeepFilterNet3 no disponible, usando RNNoise", err);
+      this.dfnAvailable = false;
+      this.dfnNode = undefined;
+    }
   }
 
   async init(opts: AudioProcessorOptions): Promise<void> {
     await this.loadRnnoise(opts.audioContext);
+    await this.prepareDeepFilter(opts.audioContext);
     return this.build(opts);
   }
 
@@ -165,12 +224,23 @@ export class VoiceProcessor implements TrackProcessor<
     this.inputAnalyser?.disconnect();
     this.outputAnalyser?.disconnect();
 
-    let node: RNNoiseNode | undefined;
-    if (
-      this.settings.noiseSupression === "enhanced" &&
+    let node: AudioNode | undefined;
+    const wantsDfn =
+      this.settings.noiseSupression === "deepfilter" &&
+      this.dfnAvailable &&
+      !this.dfnBroken &&
+      !!this.dfnNode;
+    if (wantsDfn) {
+      node = this.dfnNode;
+    } else if (
+      (this.settings.noiseSupression === "enhanced" ||
+        this.settings.noiseSupression === "deepfilter") &&
       this.rnnoiseAvailable &&
       !this.rnnoiseBroken
     ) {
+      // dfnNode no usado en esta cadena: se libera
+      this.dfnNode?.disconnect();
+      this.dfnNode = undefined;
       try {
         node = new RNNoiseNode(this.audioContext!);
       } catch (err) {
@@ -241,6 +311,10 @@ export class VoiceProcessor implements TrackProcessor<
     this.gainNode = context.createGain();
     this.gainNode.gain.value = this.settings.inputVolume;
 
+    // El nodo de DFN3 se crea de forma asíncrona antes de montar la cadena
+    this.dfnNode?.disconnect();
+    this.dfnNode = undefined;
+    await this.prepareDeepFilter(context);
     this.updateNoiseSuppression(context);
 
     // Create the destination node, connect the gain node and send it off to livekit
@@ -274,8 +348,15 @@ export class VoiceProcessor implements TrackProcessor<
       if (input > 0.02 && output < 1e-6) bad++;
       else if (output >= 1e-6) bad = 0;
       if (bad >= 6) {
-        console.error("[voice] RNNoise output is silent, disabling it");
-        this.rnnoiseBroken = true;
+        if (this.noiseSuppressionNode === this.dfnNode && this.dfnNode) {
+          console.error("[voice] DeepFilterNet3 output is silent, disabling it");
+          this.dfnBroken = true;
+          this.dfnNode?.disconnect();
+          this.dfnNode = undefined;
+        } else {
+          console.error("[voice] RNNoise output is silent, disabling it");
+          this.rnnoiseBroken = true;
+        }
         this.stopWatchdog();
         this.updateNoiseSuppression(this.audioContext!);
       }

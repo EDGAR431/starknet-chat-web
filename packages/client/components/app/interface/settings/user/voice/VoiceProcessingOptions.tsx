@@ -26,6 +26,16 @@ export function VoiceProcessingOptions() {
               description: <Trans>Powered by RNNoise</Trans>,
               shortDesc: <Trans>Enhanced (RNNoise)</Trans>,
             },
+            deepfilter: {
+              title: <Trans>Maximum quality (experimental)</Trans>,
+              description: (
+                <Trans>
+                  Powered by DeepFilterNet3. Better voice quality, uses more
+                  CPU. Falls back to Enhanced if it cannot load.
+                </Trans>
+              ),
+              shortDesc: <Trans>Maximum (DeepFilterNet3)</Trans>,
+            },
           }}
           value={voice.noiseSupression}
           onUpdate={(ns) => (voice.noiseSupression = ns)}

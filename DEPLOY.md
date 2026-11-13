@@ -27,6 +27,9 @@ docker tag starknet-chat-web:local starknet-chat-web:antes-$(date +%Y%m%d-%H%M)
 # sobrescribir con el zip nuevo
 unzip -o ~/starknet-chat-web-XXXX.zip -d ~/stoat-for-web-0.16.0
 
+# (opcional) servir DeepFilterNet3 desde nuestro dominio
+bash scripts/fetch-dfn3.sh
+
 # construir (~5 min) y recrear el contenedor
 docker build -t starknet-chat-web:local .
 cd ~/stoat && docker compose up -d --force-recreate web

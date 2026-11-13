@@ -5,12 +5,17 @@ import { AbstractStore } from ".";
 /**
  * Possible noise suppresion states. Browser is browser noise suppresion and enhanced is machine learning suppression via RNNoise.
  */
-export type NoiseSuppresionState = "disabled" | "browser" | "enhanced";
+export type NoiseSuppresionState =
+  | "disabled"
+  | "browser"
+  | "enhanced"
+  | "deepfilter";
 
 const NoiseSuppresionStates: NoiseSuppresionState[] = [
   "disabled",
   "browser",
   "enhanced",
+  "deepfilter",
 ];
 
 /**
