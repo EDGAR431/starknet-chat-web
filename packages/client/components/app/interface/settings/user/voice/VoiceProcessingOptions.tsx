@@ -3,6 +3,9 @@ import { Trans } from "@lingui/solid/macro";
 import { useState } from "@revolt/state";
 import { CategoryButton, Checkbox, Column, Text } from "@revolt/ui";
 
+/** Equipos con pocos núcleos: DeepFilterNet3 puede entrecortar el audio */
+const LOW_CORES = (navigator.hardwareConcurrency ?? 8) <= 4;
+
 /**
  * Voice processing options
  */
@@ -28,7 +31,12 @@ export function VoiceProcessingOptions() {
             },
             deepfilter: {
               title: <Trans>Maximum quality (experimental)</Trans>,
-              description: (
+              description: LOW_CORES ? (
+                <Trans>
+                  Powered by DeepFilterNet3. Your device has few CPU cores, so
+                  this may cause choppy audio. Use Enhanced if it does.
+                </Trans>
+              ) : (
                 <Trans>
                   Powered by DeepFilterNet3. Better voice quality, uses more
                   CPU. Falls back to Enhanced if it cannot load.
