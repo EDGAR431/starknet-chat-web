@@ -109,6 +109,10 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       "preferredAudioInputDevice",
       "preferredAudioOutputDevice",
       "preferredVideoDevice",
+      // Estado de la sesión en este dispositivo: sincronizarlo hacía que
+      // ensordecer o silenciar en un equipo lo aplicara también en los demás.
+      "deafen",
+      "micOn",
     ];
   }
 
@@ -233,7 +237,7 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
    * @returns Volume or default
    */
   getUserVolume(userId: string): number {
-    return this.get().userVolumes[userId] || 1.0;
+    return this.get().userVolumes[userId] ?? 1.0;
   }
 
   /**
@@ -269,7 +273,7 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
    * @returns Volume or default
    */
   getScreenShareVolume(userId: string): number {
-    return this.get().screenShareVolumes[userId] || 1.0;
+    return this.get().screenShareVolumes[userId] ?? 1.0;
   }
 
   /**

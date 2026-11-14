@@ -312,7 +312,7 @@ class Voice {
       this.#setState("CONNECTED");
       if (this.speakingPermission)
         room.localParticipant
-          .setMicrophoneEnabled(this.#settings.micOn)
+          .setMicrophoneEnabled(this.#settings.micOn && !this.#settings.deafen)
           .then((track) => {
             this.#settings.micOn = track != null;
           });
@@ -622,6 +622,9 @@ class Voice {
       room.disconnect();
 
       batch(() => {
+        // Ensordecer es un estado de la llamada: al salir se limpia para que la
+        // siguiente no empiece sin oír a nadie.
+        this.#settings.deafen = false;
         this.#setState("READY");
         this.#setConnectionQuality(ConnectionQuality.Unknown);
         this.#stopPingPolling();
@@ -646,13 +649,19 @@ class Voice {
     try {
       const room = this.room();
       if (!room) throw "invalid state";
-      await room.localParticipant.setMicrophoneEnabled(
-        (this.#settings.micOn || !!fromMute) &&
-          !room.localParticipant.isMicrophoneEnabled,
-      );
 
-      this.#settings.deafen = !this.#settings.deafen;
-      if (fromMute) {
+      // Estado destino calculado desde el ajuste, no desde el estado real del
+      // micrófono: así, aunque ambos se hayan desincronizado, un clic siempre
+      // deja la sesión en un estado coherente.
+      const deafen = !this.#settings.deafen;
+      const wantMic = deafen
+        ? false
+        : this.speakingPermission && (!!fromMute || this.#settings.micOn);
+
+      await room.localParticipant.setMicrophoneEnabled(wantMic);
+
+      this.#settings.deafen = deafen;
+      if (fromMute && !deafen) {
         this.#settings.micOn = room.localParticipant.isMicrophoneEnabled;
       }
       if (this.#settings.deafen) {
