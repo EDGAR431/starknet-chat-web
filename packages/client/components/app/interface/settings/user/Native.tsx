@@ -31,6 +31,7 @@ declare global {
       maximise(): void;
       close(): void;
       /** arrastre de respaldo de la barra de título (≥ 1.7) */
+      onMaximisedChange?(cb: (maximised: boolean) => void): void;
       dragStart?(): void;
       dragEnd?(): void;
       onceScreenPicker(

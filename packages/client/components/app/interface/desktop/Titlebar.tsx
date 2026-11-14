@@ -1,4 +1,4 @@
-import { Match, Show, Switch, createSignal } from "solid-js";
+import { Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 
 import { css } from "styled-system/css";
@@ -66,6 +66,10 @@ export function Titlebar() {
     isNative ? window.desktopConfig.get().windowState.isMaximised : false,
   );
   const { lifecycle } = useClientLifecycle();
+
+  // el escritorio avisa (>= 1.7) cuando la ventana se maximiza o se restaura,
+  // por ejemplo al arrastrar la barra de una ventana maximizada
+  onMount(() => window.native?.onMaximisedChange?.(setIsMaximised));
 
   function isDisconnected() {
     return [
