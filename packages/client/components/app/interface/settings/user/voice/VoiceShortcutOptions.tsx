@@ -14,7 +14,7 @@ import {
   activeRecorder,
   eventToAccelerator,
   formatAccelerator,
-  isMouseAccelerator,
+  isLocalOnlyAccelerator,
   mouseEventToAccelerator,
   registrationFailed,
   setActiveRecorder,
@@ -129,9 +129,7 @@ export function VoiceShortcutOptions() {
               <Trans>Another application is already using this combination.</Trans>
             </Match>
             <Match when={activeRecorder() === action && hint()}>
-              <Trans>
-                Use Ctrl, Alt or Shift together with the key (or an F key).
-              </Trans>
+              <Trans>Use Ctrl, Alt or Shift together with this key.</Trans>
             </Match>
             <Match when={activeRecorder() === action}>
               <Trans>
@@ -192,12 +190,15 @@ export function VoiceShortcutOptions() {
       </Text>
       <Show
         when={
-          isMouseAccelerator(voice.muteKeybind) ||
-          isMouseAccelerator(voice.deafenKeybind)
+          (!!voice.muteKeybind && isLocalOnlyAccelerator(voice.muteKeybind)) ||
+          (!!voice.deafenKeybind && isLocalOnlyAccelerator(voice.deafenKeybind))
         }
       >
         <Text class="label">
-          <Trans>Mouse buttons only work while StarknetChat is focused.</Trans>
+          <Trans>
+            Mouse buttons and single keys only work while StarknetChat is
+            focused.
+          </Trans>
         </Text>
       </Show>
     </Column>

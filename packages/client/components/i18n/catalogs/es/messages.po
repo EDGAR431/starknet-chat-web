@@ -4089,13 +4089,13 @@ msgid "Works only while this tab is open and focused. Use the desktop app for sh
 msgstr "Solo funciona mientras esta pestaña está abierta y en primer plano. Usa la aplicación de escritorio para atajos que funcionen en segundo plano."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Use Ctrl, Alt or Shift together with the key (or an F key)."
-msgstr "Usa Ctrl, Alt o Mayús junto con la tecla (o una tecla F)."
+msgid "Use Ctrl, Alt or Shift together with this key."
+msgstr "Usa Ctrl, Alt o Mayús junto con esta tecla."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
 msgid "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
 msgstr "Pulsa la nueva combinación de teclas o un botón del ratón. Retroceso la borra, Esc cancela."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Mouse buttons only work while StarknetChat is focused."
-msgstr "Los botones del ratón solo funcionan con StarknetChat en primer plano."
+msgid "Mouse buttons and single keys only work while StarknetChat is focused."
+msgstr "Los botones del ratón y las teclas sueltas solo funcionan con StarknetChat en primer plano."

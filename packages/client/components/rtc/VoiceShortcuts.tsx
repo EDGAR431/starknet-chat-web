@@ -7,10 +7,22 @@ import {
   type ShortcutAction,
   activeRecorder,
   eventToAccelerator,
-  isMouseAccelerator,
+  isLocalOnlyAccelerator,
   mouseEventToAccelerator,
   setRegistrationFailed,
 } from "./voiceShortcuts";
+
+/** El foco esta en un campo de texto */
+function isEditable(el: HTMLElement | null): boolean {
+  if (!el) return false;
+  const tag = el.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    el.isContentEditable
+  );
+}
 
 /**
  * Atajos de teclado para silenciarse / ensordecerse en una llamada.
@@ -40,6 +52,14 @@ export function VoiceShortcuts() {
       if (e.repeat || activeRecorder()) return;
       const acc = eventToAccelerator(e);
       if (!acc) return;
+
+      // tecla suelta (sin Ctrl/Alt/...): no actuar mientras se escribe
+      if (
+        isLocalOnlyAccelerator(acc) &&
+        isEditable(e.target as HTMLElement | null)
+      ) {
+        return;
+      }
 
       if (acc === state.voice.muteKeybind) {
         e.preventDefault();
@@ -84,7 +104,7 @@ export function VoiceShortcuts() {
     const inCall = !!voice.room();
     // los botones de raton no se pueden registrar como atajo global
     const global = (acc: string | undefined) =>
-      acc && !isMouseAccelerator(acc) ? acc : "";
+      acc && !isLocalOnlyAccelerator(acc) ? acc : "";
     const map = inCall
       ? {
           mute: global(state.voice.muteKeybind),

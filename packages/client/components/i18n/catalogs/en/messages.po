@@ -4306,13 +4306,13 @@ msgid "Works only while this tab is open and focused. Use the desktop app for sh
 msgstr "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Use Ctrl, Alt or Shift together with the key (or an F key)."
-msgstr "Use Ctrl, Alt or Shift together with the key (or an F key)."
+msgid "Use Ctrl, Alt or Shift together with this key."
+msgstr "Use Ctrl, Alt or Shift together with this key."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
 msgid "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
 msgstr "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Mouse buttons only work while StarknetChat is focused."
-msgstr "Mouse buttons only work while StarknetChat is focused."
+msgid "Mouse buttons and single keys only work while StarknetChat is focused."
+msgstr "Mouse buttons and single keys only work while StarknetChat is focused."

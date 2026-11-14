@@ -35,8 +35,16 @@ const NAMED_KEYS: Record<string, string> = {
 
 const MODIFIER_KEYS = ["Control", "Shift", "Alt", "Meta", "AltGraph", "OS"];
 
-/** Teclas que se pueden usar solas (sin Ctrl/Alt/Mays): solo F1-F24 */
-const BARE_OK = /^F(?:[1-9]|1\d|2[0-4])$/;
+/** Teclas de funcion F1-F24 */
+const F_KEY = /^F(?:[1-9]|1\d|2[0-4])$/;
+
+/**
+ * Teclas que se pueden usar solas (sin Ctrl/Alt/Mays): letras, numeros, F1-F24
+ * e Insert/Inicio/Fin/RePag/AvPag. Enter, Espacio, Tab, flechas, Retroceso y
+ * Supr no, porque se usan para manejar la propia interfaz.
+ */
+const BARE_OK =
+  /^(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Insert|Home|End|PageUp|PageDown)$/;
 
 function keyFromCode(code: string): string | null {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
@@ -48,7 +56,7 @@ function keyFromCode(code: string): string | null {
 /**
  * Convierte un evento de teclado en un acelerador ("Control+Shift+M").
  * Devuelve null si es solo una tecla modificadora, una tecla no admitida o
- * una tecla "normal" sin modificador (para no robar la escritura).
+ * una tecla sin modificador que no se puede usar sola (Enter, Espacio, flechas...).
  */
 export function eventToAccelerator(e: KeyboardEvent): string | null {
   if (MODIFIER_KEYS.includes(e.key)) return null;
@@ -89,7 +97,20 @@ export function mouseEventToAccelerator(e: MouseEvent): string | null {
   return [...mods, key].join("+");
 }
 
-/** El atajo usa un boton de raton (no se puede registrar como global) */
+/**
+ * El atajo solo funciona con la app en primer plano: botones de raton y teclas
+ * sueltas (letras, numeros...) no se pueden registrar como atajo global sin
+ * bloquear esa tecla en todo el sistema. Con modificador o F1-F24 si.
+ */
+export function isLocalOnlyAccelerator(acc: string): boolean {
+  if (isMouseAccelerator(acc)) return true;
+  const parts = acc.split("+");
+  if (F_KEY.test(parts[parts.length - 1])) return false;
+  // sin Ctrl/Alt/Win (solo Mayus o nada) bloquearia esa letra en todo el sistema
+  return !parts.some((x) => x === "Control" || x === "Alt" || x === "Super");
+}
+
+/** El atajo usa un boton de raton */
 export function isMouseAccelerator(acc: string): boolean {
   return /(?:^|\+)Mouse[345]$/.test(acc);
 }
