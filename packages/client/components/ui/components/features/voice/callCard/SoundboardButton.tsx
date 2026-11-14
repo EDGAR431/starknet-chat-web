@@ -451,7 +451,7 @@ const AnchorSpan = styled("span", {
 
 const Panel = styled("div", {
   base: {
-    zIndex: 20,
+    zIndex: 200,
     display: "flex",
     flexDirection: "column",
     gap: "var(--gap-sm)",
