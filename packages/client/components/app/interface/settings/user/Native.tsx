@@ -60,6 +60,11 @@ declare global {
       isWayland?(): Promise<boolean>;
       /** true si el audio compartido excluye las voces de la propia app (≥ 1.7) */
       loopbackExcludesApp?(): Promise<boolean>;
+      /** Audio por aplicación al compartir una ventana (Windows, escritorio ≥ 1.7.8) */
+      onAppAudioStart?(cb: () => void): void;
+      onAppAudioChunk?(cb: (chunk: Uint8Array) => void): void;
+      onAppAudioEnded?(cb: (reason: string) => void): void;
+      stopAppAudio?(): void;
       /** Reinicia la aplicación de escritorio por completo (versión ≥ 1.5.5) */
       relaunch?(): void;
     };

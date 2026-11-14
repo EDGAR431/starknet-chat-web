@@ -45,6 +45,7 @@ import { RoomAudioManager } from "./components/RoomAudioManager";
 import { distributeNewCallKey, listenForIncomingCallKey } from "../../src/e2ee/callKeyExchange";
 import { wrapCallKeyForParticipant, importPublicKey } from "../../src/e2ee/cryptoEngine";
 import { ensureDeviceKeyUploaded, getDeviceId, getOrCreateDeviceKeyPair } from "../../src/e2ee/deviceIdentity";
+import { AppAudioShare } from "./appAudioShare";
 import { VoiceProcessor, voiceLog } from "./VoiceProcessor";
 
 type State =
@@ -124,6 +125,7 @@ class Voice {
   // a descargarlo y decodificarlo cada vez.
   #soundboardBufferCache: Map<string, Promise<AudioBuffer>> = new Map();
   #soundboardDecodeContext?: AudioContext;
+  #appAudio = new AppAudioShare();
   #lastSoundboardFrom: Map<string, number> = new Map();
 
   /** Volumen maestro del soundboard de ESTE cliente (lo asigna VoiceContext) */
@@ -622,6 +624,7 @@ class Voice {
   }
 
   disconnect() {
+    void this.#appAudio.stop();
     this.device.releaseWakeLock();
     try {
       const room = this.room();
@@ -921,6 +924,7 @@ class Voice {
     if (!room) throw "invalid state";
 
     if (this.screenshare()) {
+      await this.#appAudio.stop();
       await room.localParticipant.setScreenShareEnabled(false);
 
       this.#setScreenshare(room.localParticipant.isScreenShareEnabled);
@@ -930,6 +934,9 @@ class Voice {
       const qualities = this.getEnabledScreenShareQualities();
       let screenPickerQualityName: ScreenShareQualityName | undefined;
       let screenPickerAudio: boolean | undefined;
+
+      // Audio solo de la ventana compartida (escritorio Windows)
+      if (AppAudioShare.supported()) this.#appAudio.listen(room);
 
       // Register the modal on screen picker handler if it exists
       if (window.native && window.native.onceScreenPicker) {
@@ -988,6 +995,7 @@ class Voice {
           // This catches the ending and disables screen sharing on our side. If this weren't here,
           // livekit would still share stream audio after closing the window being streamed.
           localTrack.on("ended", () => {
+            void this.#appAudio.stop();
             this.toggleScreenshare();
             const oldAudioTrack = room.localParticipant.getTrackPublication(
               Track.Source.ScreenShareAudio,
@@ -1033,6 +1041,7 @@ class Voice {
               screenAudioTrack?.pauseUpstream();
               this.openModal({
                 onCancel: async () => {
+                  await this.#appAudio.stop();
                   await room.localParticipant.setScreenShareEnabled(false);
                   this.#setScreenshare(
                     room.localParticipant.isScreenShareEnabled,
