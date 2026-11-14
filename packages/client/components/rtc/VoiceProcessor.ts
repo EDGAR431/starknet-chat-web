@@ -495,7 +495,15 @@ export class VoiceProcessor implements TrackProcessor<
     // their volume is independent of the mic's input-volume setting.
     this.soundboardBusNode = context.createGain();
     this.soundboardBusNode.gain.value = 1.0;
-    this.soundboardBusNode.connect(this.destinationNode);
+    // Limitador de seguridad: evita que sonidos fuertes saturen/recorten
+    const soundboardLimiter = context.createDynamicsCompressor();
+    soundboardLimiter.threshold.value = -6;
+    soundboardLimiter.knee.value = 0;
+    soundboardLimiter.ratio.value = 20;
+    soundboardLimiter.attack.value = 0.003;
+    soundboardLimiter.release.value = 0.1;
+    this.soundboardBusNode.connect(soundboardLimiter);
+    soundboardLimiter.connect(this.destinationNode);
 
     this.processedTrack = this.destinationNode.stream.getAudioTracks()[0];
   }

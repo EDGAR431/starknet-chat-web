@@ -186,7 +186,7 @@ function SoundboardPanel(props: {
   function play(sound: { fileId: string; volume: number }) {
     voice.playSoundboardSound(
       sound.fileId,
-      sound.volume * state.soundboard.masterVolume,
+      (sound.volume / 100) * state.soundboard.masterVolume,
     );
   }
 
