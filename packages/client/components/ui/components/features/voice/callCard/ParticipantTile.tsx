@@ -14,7 +14,7 @@ import { styled } from "styled-system/jsx";
 
 import { UserContextMenu } from "@revolt/app";
 import { useUser } from "@revolt/markdown/users";
-import { useVoice } from "@revolt/rtc";
+import { useParticipantDeafened, useVoice } from "@revolt/rtc";
 import { useState } from "@revolt/state";
 import { Avatar } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
@@ -36,6 +36,7 @@ export function ParticipantTile(props: TileProps) {
   const participant = useEnsureParticipant();
   const track = useTrackRefContext();
   const user = useUser(participant.identity);
+  const selfDeafened = useParticipantDeafened(participant);
 
   let videoRef: HTMLVideoElement | undefined;
 
@@ -171,7 +172,8 @@ export function ParticipantTile(props: TileProps) {
                   deafened={
                     user().user!.self
                       ? voice.deafen()
-                      : voice.channel()?.voiceParticipants
+                      : selfDeafened() ||
+                        voice.channel()?.voiceParticipants
                           .get(participant.identity)
                           ?.isReceiving() === false
                   }

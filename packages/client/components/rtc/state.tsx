@@ -25,6 +25,7 @@ import {
   VideoEncoding,
   VideoPresets,
 } from "livekit-client";
+import { publishDeafened } from "./deafenedAttribute";
 import { Channel } from "stoat.js";
 
 import { SoundController, useClient, useSound } from "@revolt/client";
@@ -661,6 +662,7 @@ class Voice {
       await room.localParticipant.setMicrophoneEnabled(wantMic);
 
       this.#settings.deafen = deafen;
+      void publishDeafened(room.localParticipant, deafen);
       if (fromMute && !deafen) {
         this.#settings.micOn = room.localParticipant.isMicrophoneEnabled;
       }

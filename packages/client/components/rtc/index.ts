@@ -2,6 +2,7 @@ import { getVirtmic } from "./virtualMic";
 
 export { useVoice, VoiceContext } from "./state";
 export { CallRinger } from "./CallRinger";
+export { useParticipantDeafened } from "./deafenedAttribute";
 
 export { InRoom } from "./components/InRoom";
 export { RoomAudioManager } from "./components/RoomAudioManager";

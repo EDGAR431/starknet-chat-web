@@ -14,7 +14,7 @@ import { styled } from "styled-system/jsx";
 
 import { UserContextMenu } from "@revolt/app";
 import { useUser } from "@revolt/markdown/users";
-import { InRoom, useVoice } from "@revolt/rtc";
+import { InRoom, useParticipantDeafened, useVoice } from "@revolt/rtc";
 
 import { Avatar, Ripple, typography } from "../../design";
 import { Row } from "../../layout";
@@ -82,6 +82,7 @@ function ParticipantLive() {
   const isSpeaking = useIsSpeaking(participant);
   const voice = useVoice();
   const me = useUser(() => participant.identity);
+  const selfDeafened = useParticipantDeafened(participant);
 
   return (
     <CommonUser
@@ -91,7 +92,8 @@ function ParticipantLive() {
       deafened={
         me().user?.self
           ? voice.deafen()
-          : voice.channel()?.voiceParticipants
+          : selfDeafened() ||
+            voice.channel()?.voiceParticipants
               .get(participant.identity)
               ?.isReceiving() === false
       }
