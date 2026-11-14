@@ -3939,3 +3939,15 @@ msgstr "Funciona aínda que StarknetChat estea en segundo plano. A combinación 
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
 msgid "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
 msgstr "Só funciona mentres esta lapela está aberta e en primeiro plano. Usa a aplicación de escritorio para atallos que funcionen en segundo plano."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Use Ctrl, Alt or Shift together with the key (or an F key)."
+msgstr "Usa Ctrl, Alt ou Maiús xunto coa tecla (ou unha tecla F)."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
+msgstr "Preme a nova combinación de teclas ou un botón do rato. Retroceso bórraa, Esc cancela."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Mouse buttons only work while StarknetChat is focused."
+msgstr "Os botóns do rato só funcionan con StarknetChat en primeiro plano."

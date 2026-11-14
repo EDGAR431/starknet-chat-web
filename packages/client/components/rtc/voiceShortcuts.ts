@@ -65,8 +65,37 @@ export function eventToAccelerator(e: KeyboardEvent): string | null {
   return [...mods, key].join("+");
 }
 
+/** Botones de raton admitidos: rueda (Mouse3), atras (Mouse4), adelante (Mouse5) */
+const MOUSE_BUTTONS: Record<number, string> = {
+  1: "Mouse3",
+  3: "Mouse4",
+  4: "Mouse5",
+};
+
+/**
+ * Convierte un evento de raton en un acelerador ("Mouse4", "Control+Mouse4").
+ * Solo los botones extra y la rueda: el clic izquierdo/derecho no se admite.
+ * Los botones de raton solo funcionan con la app en primer plano (el sistema
+ * no deja registrarlos como atajo global).
+ */
+export function mouseEventToAccelerator(e: MouseEvent): string | null {
+  const key = MOUSE_BUTTONS[e.button];
+  if (!key) return null;
+  const mods: string[] = [];
+  if (e.ctrlKey) mods.push("Control");
+  if (e.altKey) mods.push("Alt");
+  if (e.shiftKey) mods.push("Shift");
+  if (e.metaKey) mods.push("Super");
+  return [...mods, key].join("+");
+}
+
+/** El atajo usa un boton de raton (no se puede registrar como global) */
+export function isMouseAccelerator(acc: string): boolean {
+  return /(?:^|\+)Mouse[345]$/.test(acc);
+}
+
 const VALID =
-  /^(?:(?:Control|Alt|Shift|Super)\+){0,4}(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Up|Down|Left|Right|Space|Return|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown)$/;
+  /^(?:(?:Control|Alt|Shift|Super)\+){0,4}(?:[A-Z0-9]|F(?:[1-9]|1\d|2[0-4])|Up|Down|Left|Right|Space|Return|Tab|Backspace|Delete|Insert|Home|End|PageUp|PageDown|Mouse[345])$/;
 
 /** Valida un acelerador guardado (cadena vacia = sin asignar) */
 export function isValidAccelerator(acc: unknown): acc is string {
@@ -74,7 +103,9 @@ export function isValidAccelerator(acc: unknown): acc is string {
     return false;
   }
   const parts = acc.split("+");
-  return parts.length > 1 || BARE_OK.test(parts[0]);
+  return (
+    parts.length > 1 || BARE_OK.test(parts[0]) || isMouseAccelerator(acc)
+  );
 }
 
 const IS_MAC = navigator.platform.startsWith("Mac");
@@ -91,6 +122,12 @@ export function formatAccelerator(acc: string): string {
           return IS_MAC ? "⌘" : "Win";
         case "Return":
           return "Enter";
+        case "Mouse3":
+          return "Mouse 3";
+        case "Mouse4":
+          return "Mouse 4";
+        case "Mouse5":
+          return "Mouse 5";
         default:
           return part;
       }

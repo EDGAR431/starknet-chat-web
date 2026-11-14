@@ -7,6 +7,8 @@ import {
   type ShortcutAction,
   activeRecorder,
   eventToAccelerator,
+  isMouseAccelerator,
+  mouseEventToAccelerator,
   setRegistrationFailed,
 } from "./voiceShortcuts";
 
@@ -48,8 +50,30 @@ export function VoiceShortcuts() {
       }
     };
 
+    // botones de raton (rueda, atras, adelante); solo con la app en primer plano
+    const onMouse = (e: MouseEvent) => {
+      if (activeRecorder()) return;
+      const acc = mouseEventToAccelerator(e);
+      if (!acc) return;
+      if (acc !== state.voice.muteKeybind && acc !== state.voice.deafenKeybind) {
+        return;
+      }
+      e.preventDefault(); // evita que "atras/adelante" navegue por el historial
+      e.stopPropagation();
+      if (e.type !== "mousedown") return;
+      trigger(acc === state.voice.muteKeybind ? "mute" : "deafen");
+    };
+
     window.addEventListener("keydown", onKeyDown, true);
-    onCleanup(() => window.removeEventListener("keydown", onKeyDown, true));
+    window.addEventListener("mousedown", onMouse, true);
+    window.addEventListener("mouseup", onMouse, true);
+    window.addEventListener("auxclick", onMouse, true);
+    onCleanup(() => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("mousedown", onMouse, true);
+      window.removeEventListener("mouseup", onMouse, true);
+      window.removeEventListener("auxclick", onMouse, true);
+    });
 
     window.native?.onVoiceShortcut?.(trigger);
   });
@@ -58,10 +82,13 @@ export function VoiceShortcuts() {
   createEffect(() => {
     if (!window.native?.setVoiceShortcuts) return;
     const inCall = !!voice.room();
+    // los botones de raton no se pueden registrar como atajo global
+    const global = (acc: string | undefined) =>
+      acc && !isMouseAccelerator(acc) ? acc : "";
     const map = inCall
       ? {
-          mute: state.voice.muteKeybind ?? "",
-          deafen: state.voice.deafenKeybind ?? "",
+          mute: global(state.voice.muteKeybind),
+          deafen: global(state.voice.deafenKeybind),
         }
       : { mute: "", deafen: "" };
 

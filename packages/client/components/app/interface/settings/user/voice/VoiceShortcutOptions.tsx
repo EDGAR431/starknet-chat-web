@@ -14,6 +14,8 @@ import {
   activeRecorder,
   eventToAccelerator,
   formatAccelerator,
+  isMouseAccelerator,
+  mouseEventToAccelerator,
   registrationFailed,
   setActiveRecorder,
 } from "@revolt/rtc/voiceShortcuts";
@@ -43,6 +45,17 @@ export function VoiceShortcutOptions() {
     const action = activeRecorder();
     if (!action) return;
 
+    const finish = (acc: string) => {
+      if (acc === keybind(other(action))) {
+        setConflict(action);
+        return;
+      }
+      setConflict(null);
+      setHint(false);
+      setKeybind(action, acc);
+      setActiveRecorder(null);
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -54,28 +67,53 @@ export function VoiceShortcutOptions() {
       }
       if (e.key === "Backspace" || e.key === "Delete") {
         setKeybind(action, "");
+        setHint(false);
         setActiveRecorder(null);
         return;
       }
+      if (["Control", "Shift", "Alt", "Meta", "AltGraph", "OS"].includes(e.key)) {
+        return; // solo modificadores: seguir esperando
+      }
 
       const acc = eventToAccelerator(e);
-      if (!acc) return; // solo modificadores: seguir esperando
-      if (acc === keybind(other(action))) {
-        setConflict(action);
+      if (!acc) {
+        setHint(true); // tecla suelta no admitida: avisar
         return;
       }
-      setConflict(null);
-      setKeybind(action, acc);
-      setActiveRecorder(null);
+      finish(acc);
+    };
+
+    // botones de raton: rueda, atras y adelante (clic izq./dcho. no)
+    const onMouseDown = (e: MouseEvent) => {
+      const acc = mouseEventToAccelerator(e);
+      if (!acc) return;
+      e.preventDefault();
+      e.stopPropagation();
+      finish(acc);
+    };
+    const swallow = (e: MouseEvent) => {
+      if (mouseEventToAccelerator(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown, true);
-    onCleanup(() => window.removeEventListener("keydown", onKeyDown, true));
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("mouseup", swallow, true);
+    window.addEventListener("auxclick", swallow, true);
+    onCleanup(() => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("mouseup", swallow, true);
+      window.removeEventListener("auxclick", swallow, true);
+    });
   });
 
   onCleanup(() => {
     setActiveRecorder(null);
     setConflict(null);
+    setHint(false);
   });
 
   function row(action: ShortcutAction) {
@@ -90,9 +128,15 @@ export function VoiceShortcutOptions() {
             <Match when={registrationFailed()[action] && keybind(action)}>
               <Trans>Another application is already using this combination.</Trans>
             </Match>
+            <Match when={activeRecorder() === action && hint()}>
+              <Trans>
+                Use Ctrl, Alt or Shift together with the key (or an F key).
+              </Trans>
+            </Match>
             <Match when={activeRecorder() === action}>
               <Trans>
-                Press the new key combination. Backspace removes it, Esc cancels.
+                Press the new key combination or a mouse button. Backspace
+                removes it, Esc cancels.
               </Trans>
             </Match>
             <Match when={!keybind(action)}>
@@ -111,6 +155,7 @@ export function VoiceShortcutOptions() {
         }
         onClick={() => {
           setConflict(null);
+          setHint(false);
           setActiveRecorder(activeRecorder() === action ? null : action);
         }}
       >
@@ -145,8 +190,19 @@ export function VoiceShortcutOptions() {
           </Trans>
         </Show>
       </Text>
+      <Show
+        when={
+          isMouseAccelerator(voice.muteKeybind) ||
+          isMouseAccelerator(voice.deafenKeybind)
+        }
+      >
+        <Text class="label">
+          <Trans>Mouse buttons only work while StarknetChat is focused.</Trans>
+        </Text>
+      </Show>
     </Column>
   );
 }
 
 const [conflict, setConflict] = createSignal<ShortcutAction | null>(null);
+const [hint, setHint] = createSignal(false);
