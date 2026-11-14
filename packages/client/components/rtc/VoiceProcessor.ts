@@ -1,5 +1,4 @@
 import { AudioProcessorOptions, Track, TrackProcessor } from "livekit-client";
-import { DeepFilterNet3Core } from "deepfilternet3-noise-filter";
 import { RNNoiseNode } from "livekit-rnnoise-processor";
 import { createEffect, createRoot, createSignal, on } from "solid-js";
 
@@ -12,6 +11,13 @@ import { Voice } from "@revolt/state/stores/Voice";
  */
 export const [voiceProcessorStatus, setVoiceProcessorStatus] =
   createSignal<string>("");
+
+/** Lo que usamos de @workadventure/noise-suppression (DeepFilterNet3) */
+type DfnWorklet = {
+  node: AudioWorkletNode;
+  ready: Promise<unknown>;
+  dispose(): void;
+};
 
 const LOG_MAX = 300;
 const logLines: string[] = [];
@@ -103,8 +109,11 @@ export class VoiceProcessor implements TrackProcessor<
   private ownContext?: AudioContext;
 
   // DeepFilterNet3 (opcional, experimental)
-  private dfnCore?: DeepFilterNet3Core;
+  private dfnWorklet?: DfnWorklet;
   private dfnNode?: AudioWorkletNode;
+  /** Contexto en el que se creo el nodo de DFN3 (un nodo no sirve en otro) */
+  private dfnContext?: BaseAudioContext;
+  private dfnLoading = false;
   private dfnAvailable = true;
   private dfnBroken = false;
   private watchdog?: ReturnType<typeof setInterval>;
@@ -162,56 +171,91 @@ export class VoiceProcessor implements TrackProcessor<
   private async rebuild() {
     const context = this.audioContext;
     if (!context) return;
-    await this.prepareDeepFilter(context);
+    this.startDeepFilter(context);
     this.updateNoiseSuppression(context);
   }
 
+  /** Libera el nodo de DeepFilterNet3 (si lo hay) */
+  private disposeDfn() {
+    try {
+      this.dfnNode?.disconnect();
+      this.dfnWorklet?.dispose();
+    } catch {
+      /* ignorar */
+    }
+    this.dfnWorklet = undefined;
+    this.dfnNode = undefined;
+    this.dfnContext = undefined;
+  }
+
   /**
-   * Prepara el nodo de DeepFilterNet3 si el usuario lo ha elegido. Si no se
-   * puede cargar (sin red al CDN, contexto que no es de 48 kHz...) se marca
-   * como no disponible y se usa RNNoise en su lugar.
+   * Carga DeepFilterNet3 en segundo plano si el usuario lo ha elegido. Mientras
+   * descarga (unos 11 MB la primera vez) se usa RNNoise para que la llamada no
+   * espere; al terminar se cambia solo. Si falla (o el equipo no da abasto) se
+   * queda en RNNoise. Los archivos van incluidos en la propia web: no se
+   * descargan de ningun servidor externo.
    */
-  private async prepareDeepFilter(context: AudioContext): Promise<void> {
+  private startDeepFilter(context: AudioContext) {
     if (this.settings.noiseSupression !== "deepfilter") return;
-    if (!this.dfnAvailable || this.dfnBroken || this.dfnNode) return;
+    if (!this.dfnAvailable || this.dfnBroken || this.dfnLoading) return;
+    if (this.dfnNode && this.dfnContext === context) return;
+    if (this.dfnNode) this.disposeDfn(); // era de otro contexto
     if (context.sampleRate !== 48000) {
       voiceLog("warn", "DeepFilterNet3 necesita 48 kHz, usando RNNoise");
       this.dfnAvailable = false;
       return;
     }
-    try {
-      if (!this.dfnCore) {
-        const bundled = new URL(
-          `${import.meta.env.BASE_URL ?? "/"}dfn3`.replace(/\/\/+/g, "/"),
-          window.location.origin,
-        ).href;
-        // Copia propia si existe (ver scripts/fetch-dfn3.sh); si no, el CDN
-        // por defecto de la librería.
-        let cdnUrl: string | undefined;
-        try {
-          const r = await fetch(`${bundled}/v3/pkg/df_bg.wasm`);
-          const m = new Uint8Array((await r.arrayBuffer()).slice(0, 4));
-          if (r.ok && m[0] === 0 && m[1] === 0x61 && m[2] === 0x73) {
-            cdnUrl = bundled;
-          }
-        } catch {
-          /* usar CDN por defecto */
+
+    this.dfnLoading = true;
+    void (async () => {
+      try {
+        const { createDeepFilterNetAudioWorklet } = await import(
+          "@workadventure/noise-suppression/deepfilternet"
+        );
+        const worklet = (await createDeepFilterNetAudioWorklet(context, {
+          bypassUntilReady: true,
+          onOverload: (load: number) => {
+            // el equipo no puede con el modelo: volver a RNNoise
+            voiceLog(
+              "warn",
+              `DeepFilterNet3 va al ${(load * 100).toFixed(0)} % del tiempo real: se vuelve a RNNoise`,
+            );
+            this.dfnBroken = true;
+            this.disposeDfn();
+            if (this.audioContext === context) {
+              this.updateNoiseSuppression(context);
+            }
+          },
+        })) as DfnWorklet;
+        await worklet.ready;
+
+        // la llamada puede haber terminado o el usuario cambiado de opcion
+        if (
+          this.audioContext !== context ||
+          this.settings.noiseSupression !== "deepfilter"
+        ) {
+          worklet.dispose();
+          return;
         }
-        const core = new DeepFilterNet3Core({
-          sampleRate: 48000,
-          noiseReductionLevel: 80,
-          assetConfig: cdnUrl ? { cdnUrl } : undefined,
-        });
-        await core.initialize();
-        this.dfnCore = core;
+        this.dfnWorklet = worklet;
+        this.dfnNode = worklet.node;
+        this.dfnContext = context;
+        voiceLog("info", "DeepFilterNet3 cargado");
+        if (this.sourceNode && this.gainNode) {
+          this.updateNoiseSuppression(context);
+        }
+      } catch (err) {
+        voiceLog(
+          "error",
+          "DeepFilterNet3 no disponible, usando RNNoise",
+          err,
+        );
+        this.dfnAvailable = false;
+        this.disposeDfn();
+      } finally {
+        this.dfnLoading = false;
       }
-      this.dfnNode = await this.dfnCore.createAudioWorkletNode(context);
-      voiceLog("info", "DeepFilterNet3 cargado");
-    } catch (err) {
-      voiceLog("error", "DeepFilterNet3 no disponible, usando RNNoise", err);
-      this.dfnAvailable = false;
-      this.dfnNode = undefined;
-    }
+    })();
   }
 
   /**
@@ -248,7 +292,6 @@ export class VoiceProcessor implements TrackProcessor<
   async init(opts: AudioProcessorOptions): Promise<void> {
     const context = this.workContext(opts.audioContext);
     await this.loadRnnoise(context);
-    await this.prepareDeepFilter(context);
     return this.build(opts);
   }
 
@@ -313,6 +356,7 @@ export class VoiceProcessor implements TrackProcessor<
     this.disposeSolidjsContext();
     this.audioContext = undefined;
     await this.teardown();
+    this.disposeDfn();
     if (this.ownContext) {
       void this.ownContext.close().catch(() => {});
       this.ownContext = undefined;
@@ -346,9 +390,6 @@ export class VoiceProcessor implements TrackProcessor<
       this.rnnoiseAvailable &&
       !this.rnnoiseBroken
     ) {
-      // dfnNode no usado en esta cadena: se libera
-      this.dfnNode?.disconnect();
-      this.dfnNode = undefined;
       try {
         node = new RNNoiseNode(this.audioContext!);
       } catch (err) {
@@ -442,10 +483,8 @@ export class VoiceProcessor implements TrackProcessor<
     this.gainNode = context.createGain();
     this.gainNode.gain.value = this.settings.inputVolume;
 
-    // El nodo de DFN3 se crea de forma asíncrona antes de montar la cadena
-    this.dfnNode?.disconnect();
-    this.dfnNode = undefined;
-    await this.prepareDeepFilter(context);
+    // DeepFilterNet3 se carga en segundo plano; mientras tanto, RNNoise
+    this.startDeepFilter(context);
     this.updateNoiseSuppression(context);
 
     // Create the destination node, connect the gain node and send it off to livekit
@@ -489,8 +528,7 @@ export class VoiceProcessor implements TrackProcessor<
         if (this.noiseSuppressionNode === this.dfnNode && this.dfnNode) {
           voiceLog("error", "DeepFilterNet3 da salida muda con voz en la entrada: se desactiva");
           this.dfnBroken = true;
-          this.dfnNode?.disconnect();
-          this.dfnNode = undefined;
+          this.disposeDfn();
         } else {
           voiceLog("error", "RNNoise da salida muda con voz en la entrada: se desactiva");
           this.rnnoiseBroken = true;

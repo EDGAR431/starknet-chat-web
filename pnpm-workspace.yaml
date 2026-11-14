@@ -5,6 +5,9 @@ packages:
 allowBuilds:
   "@swc/core": true
   esbuild: true
+  # dependencia de @workadventure/noise-suppression (onnxruntime): su script
+  # de instalacion no hace falta
+  protobufjs: false
 minimumReleaseAgeExclude:
   - stoat-api
 nodeLinker: isolated
