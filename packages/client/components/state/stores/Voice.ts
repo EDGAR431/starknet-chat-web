@@ -1,5 +1,7 @@
 import { State } from "..";
 
+import { isValidAccelerator } from "../../rtc/voiceShortcuts";
+
 import { AbstractStore } from ".";
 
 /**
@@ -50,6 +52,10 @@ export interface TypeVoice {
   deafen: boolean;
   micOn: boolean;
 
+  /** atajos de teclado en formato Electron ("Control+Shift+M"); "" = sin asignar */
+  muteKeybind: string;
+  deafenKeybind: string;
+
   userVolumes: Record<string, number>;
   userMutes: Record<string, boolean>;
 
@@ -91,6 +97,8 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       outputVolume: 1.0,
       deafen: false,
       micOn: true,
+      muteKeybind: "",
+      deafenKeybind: "",
       userVolumes: {},
       userMutes: {},
       screenShareVolumes: {},
@@ -113,6 +121,9 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       // ensordecer o silenciar en un equipo lo aplicara también en los demás.
       "deafen",
       "micOn",
+      // Los atajos dependen del teclado y del sistema de cada equipo
+      "muteKeybind",
+      "deafenKeybind",
     ];
   }
 
@@ -183,6 +194,17 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
 
     if (typeof input.micOn === "boolean") {
       data.micOn = input.micOn;
+    }
+
+    if (isValidAccelerator(input.muteKeybind)) {
+      data.muteKeybind = input.muteKeybind;
+    }
+
+    if (
+      isValidAccelerator(input.deafenKeybind) &&
+      input.deafenKeybind !== data.muteKeybind
+    ) {
+      data.deafenKeybind = input.deafenKeybind;
     }
 
     if (typeof input.userVolumes === "object") {
@@ -313,6 +335,28 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
    */
   set preferredVideoDevice(value: string | undefined) {
     this.set("preferredVideoDevice", value);
+  }
+
+  /**
+   * Atajo para silenciarse ("" = sin asignar)
+   */
+  get muteKeybind(): string {
+    return this.get().muteKeybind;
+  }
+
+  set muteKeybind(value: string) {
+    this.set("muteKeybind", value);
+  }
+
+  /**
+   * Atajo para ensordecerse ("" = sin asignar)
+   */
+  get deafenKeybind(): string {
+    return this.get().deafenKeybind;
+  }
+
+  set deafenKeybind(value: string) {
+    this.set("deafenKeybind", value);
   }
 
   /**

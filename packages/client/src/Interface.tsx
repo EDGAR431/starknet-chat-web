@@ -17,6 +17,7 @@ import { useClient, useClientLifecycle } from "@revolt/client";
 import { State } from "@revolt/client/Controller";
 import { NotificationsWorker } from "@revolt/client/NotificationsWorker";
 import { CallRinger } from "@revolt/rtc";
+import { VoiceShortcuts } from "@revolt/rtc/VoiceShortcuts";
 import { useModals } from "@revolt/modal";
 import { Navigate, useBeforeLeave, useLocation } from "@revolt/routing";
 import { useState } from "@revolt/state";
@@ -143,6 +144,7 @@ const Interface = (props: { children: JSX.Element }) => {
 
         <NotificationsWorker />
         <CallRinger />
+        <VoiceShortcuts />
       </AppRoot>
     </MessageCache>
   );

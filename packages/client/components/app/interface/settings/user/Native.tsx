@@ -33,6 +33,12 @@ declare global {
       /** arrastre de respaldo de la barra de título (≥ 1.7) */
       onMaximisedChange?(cb: (maximised: boolean) => void): void;
       /** actualizaciones propias (>= 1.7): busca ahora y devuelve el estado */
+      /** atajos globales de voz (>= 1.7.2); resuelve con false en los que no se pudieron registrar */
+      setVoiceShortcuts?(map: {
+        mute: string;
+        deafen: string;
+      }): Promise<{ mute: boolean; deafen: boolean }>;
+      onVoiceShortcut?(cb: (action: "mute" | "deafen") => void): void;
       checkForUpdates?(): Promise<
         "unsupported" | "up-to-date" | "downloading" | "ready" | "error"
       >;

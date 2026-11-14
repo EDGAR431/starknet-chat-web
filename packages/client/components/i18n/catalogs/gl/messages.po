@@ -3907,3 +3907,35 @@ msgstr "As actualizacións xestiónaas a Microsoft Store."
 #: components/app/interface/settings/user/Native.tsx
 msgid "Couldn't check for updates. Try again later."
 msgstr "Non se puido buscar actualizacións. Téntao máis tarde."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Mute shortcut"
+msgstr "Atallo para silenciarte"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Deafen shortcut"
+msgstr "Atallo para ensurdecerte"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Press the new key combination. Backspace removes it, Esc cancels."
+msgstr "Preme a nova combinación de teclas. Retroceso bórraa, Esc cancela."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Not set. Click to choose a key combination."
+msgstr "Sen asignar. Fai clic para escoller unha combinación de teclas."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Another application is already using this combination."
+msgstr "Outra aplicación xa usa esta combinación."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "This combination is already used by the other shortcut."
+msgstr "Esta combinación xa a usa o outro atallo."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Works even when StarknetChat is in the background. The combination is reserved while you are in a call."
+msgstr "Funciona aínda que StarknetChat estea en segundo plano. A combinación queda reservada mentres esteas nunha chamada."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
+msgstr "Só funciona mentres esta lapela está aberta e en primeiro plano. Usa a aplicación de escritorio para atallos que funcionen en segundo plano."
