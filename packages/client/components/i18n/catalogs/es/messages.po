@@ -4264,3 +4264,31 @@ msgstr ""
 #: components/i18n/errors.tsx
 msgid "Your user has already been created? Try logging in again or refreshing the app."
 msgstr "¿Ya has creado un usuario? Intenta iniciar sesión o recargar la aplicación."
+
+#: components/app/interface/settings/UserSettings.tsx
+msgid "Apps"
+msgstr "Aplicaciones"
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Not published yet. Use the Microsoft Store for now."
+msgstr "Aún no está publicado. De momento use la Microsoft Store."
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Windows installer. It updates itself in the background, with no waiting for the Store."
+msgstr "Instalador para Windows. Se actualiza solo en segundo plano, sin esperar a la Store."
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Download for Windows (installer)"
+msgstr "Descargar para Windows (instalador)"
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Install from the Microsoft Store. Updates arrive through the Store."
+msgstr "Instalar desde la Microsoft Store. Las actualizaciones llegan a través de la Store."
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Get it from the Microsoft Store"
+msgstr "Obtener en la Microsoft Store"
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "If Windows SmartScreen warns you when opening the installer, choose \"More info\" and then \"Run anyway\". The installer is not signed yet."
+msgstr "Si Windows SmartScreen le avisa al abrir el instalador, elija \"Más información\" y después \"Ejecutar de todas formas\". El instalador aún no está firmado."

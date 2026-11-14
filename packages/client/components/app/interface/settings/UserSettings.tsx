@@ -33,6 +33,7 @@ import { SettingsConfiguration } from ".";
 import { AccountCard, BackCard } from "./user/_AccountCard";
 import { MyAccount } from "./user/Account";
 import AdvancedSettings from "./user/Advanced";
+import { AppsSettings } from "./user/Apps";
 import { AppearanceMenu } from "./user/appearance";
 import { MyBots, ViewBot } from "./user/bots";
 import { Feedback } from "./user/Feedback";
@@ -96,6 +97,8 @@ const Config: SettingsConfiguration<{ server: Server }> = {
         return <EditSubscription />;
       case "native":
         return <Native />;
+      case "apps":
+        return <AppsSettings />;
       case "voice":
         return <VoiceSettings />;
       case "notifications":
@@ -305,6 +308,12 @@ const Config: SettingsConfiguration<{ server: Server }> = {
               hidden: !window.native,
               icon: <Symbol size={20}>desktop_windows</Symbol>,
               title: <Trans>Desktop</Trans>,
+            },
+            {
+              id: "apps",
+              hidden: !!window.native,
+              icon: <Symbol size={20}>download</Symbol>,
+              title: <Trans>Apps</Trans>,
             },
             // {
             //   id: "experiments",
