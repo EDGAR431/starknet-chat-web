@@ -124,6 +124,10 @@ class Voice {
   // a descargarlo y decodificarlo cada vez.
   #soundboardBufferCache: Map<string, Promise<AudioBuffer>> = new Map();
   #soundboardDecodeContext?: AudioContext;
+  #lastSoundboardFrom: Map<string, number> = new Map();
+
+  /** Volumen maestro del soundboard de ESTE cliente (lo asigna VoiceContext) */
+  soundboardMaster: () => number = () => 1;
 
   // Cifrado extremo a extremo de la llamada actual
   #e2eeKeyProvider: ExternalE2EEKeyProvider | undefined;
@@ -411,10 +415,14 @@ class Voice {
     const pingDecoder = new TextDecoder();
     room.addListener("dataReceived", (payload, participant) => {
       if (!participant) return;
-      let message: { type?: string; ms?: number };
+      let message: { type?: string; ms?: number; fileId?: string; volume?: number };
       try {
         message = JSON.parse(pingDecoder.decode(payload));
       } catch {
+        return;
+      }
+      if (message.type === "starknet-soundboard") {
+        this.#onRemoteSoundboard(participant.identity, message);
         return;
       }
       if (message.type === "starknet-ping-report" && typeof message.ms === "number") {
@@ -713,29 +721,88 @@ class Voice {
     try {
       const buffer = await this.loadSoundboardBuffer(fileId);
 
-      if (this.voiceProcessor?.playSoundboardSound(buffer, volume)) return;
+      // Local: con NUESTRO volumen maestro
+      await this.#playSoundboardLocal(buffer, volume * this.soundboardMaster());
 
-      // Sin cadena de audio saliente (p. ej. se entro con el micro apagado y
-      // aun no se ha publicado): al menos se oye en local.
-      voiceLog(
-        "warn",
-        "soundboard: sin cadena de audio saliente; se reproduce solo en local",
-      );
-      const ctx = this.#soundboardDecodeContext;
-      if (ctx) {
-        if (ctx.state !== "running") await ctx.resume().catch(() => {});
-        const source = ctx.createBufferSource();
-        const gain = ctx.createGain();
-        source.buffer = buffer;
-        gain.gain.value = volume;
-        source.connect(gain);
-        gain.connect(ctx.destination);
-        source.start();
+      // Resto de la llamada: se les envía la orden (no el audio), y cada
+      // cliente lo reproduce con SU propio volumen maestro.
+      const room = this.room();
+      if (room && !this.#settings.deafen) {
+        try {
+          await room.localParticipant.publishData(
+            new TextEncoder().encode(
+              JSON.stringify({ type: "starknet-soundboard", fileId, volume }),
+            ),
+            { reliable: true },
+          );
+        } catch (e) {
+          voiceLog("warn", "soundboard: no se pudo enviar el sonido a la llamada", e);
+        }
       }
     } catch (e) {
       voiceLog("error", "soundboard: no se pudo reproducir el sonido", e);
       console.error("[soundboard] no se pudo reproducir el sonido:", e);
     }
+  }
+
+  async #playSoundboardLocal(buffer: AudioBuffer, gainValue: number) {
+    const ctx = this.#soundboardDecodeContext;
+    if (!ctx) return;
+    if (ctx.state !== "running") await ctx.resume().catch(() => {});
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    // Limitador de seguridad para que nunca sature
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -6;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.1;
+    source.buffer = buffer;
+    gain.gain.value = gainValue;
+    source.connect(gain);
+    gain.connect(limiter);
+    limiter.connect(ctx.destination);
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      gain.disconnect();
+      limiter.disconnect();
+    });
+    source.start();
+  }
+
+  /** Otro participante ha lanzado un sonido: se reproduce en local */
+  #onRemoteSoundboard(
+    identity: string,
+    message: { fileId?: string; volume?: number },
+  ) {
+    const fileId = message.fileId;
+    if (typeof fileId !== "string" || !/^[A-Za-z0-9_-]{8,64}$/.test(fileId)) return;
+    if (this.#settings.deafen) return;
+    if (this.#settings.getUserMuted(identity)) return;
+
+    // Anti-spam: un sonido por participante cada 250 ms
+    const now = Date.now();
+    if (now - (this.#lastSoundboardFrom.get(identity) ?? 0) < 250) return;
+    this.#lastSoundboardFrom.set(identity, now);
+
+    const sent =
+      typeof message.volume === "number" && isFinite(message.volume)
+        ? Math.min(2, Math.max(0, message.volume))
+        : 1;
+    const gainValue =
+      sent *
+      this.soundboardMaster() *
+      Math.min(2, this.#settings.getUserVolume(identity));
+
+    void (async () => {
+      try {
+        const buffer = await this.loadSoundboardBuffer(fileId);
+        await this.#playSoundboardLocal(buffer, gainValue);
+      } catch (e) {
+        voiceLog("error", "soundboard: no se pudo reproducir el sonido remoto", e);
+      }
+    })();
   }
 
   /**
@@ -1088,6 +1155,7 @@ export function VoiceContext(props: { children: JSX.Element }) {
   const sound = useSound();
   const device = useDevice();
   const voice = new Voice(state.voice, modals, sound, device);
+  voice.soundboardMaster = () => state.soundboard.masterVolume;
 
   return (
     <voiceContext.Provider value={voice}>
