@@ -3963,3 +3963,7 @@ msgstr "Copiado. Pégao nunha mensaxe a quen che estea axudando."
 #: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
 msgid "Technical details to find out why the microphone or noise suppression fails."
 msgstr "Datos técnicos para descubrir por que falla o micrófono ou a supresión de ruído."
+
+#: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
+msgid "Deafened"
+msgstr "Ensordecido"

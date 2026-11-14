@@ -22,9 +22,24 @@ export function VoiceStatefulUserIcons(props: {
   const isMuted = () =>
     state.voice.getUserMuted(props.userId) ? "by-user" : props.muted || false;
 
+  // Como en Discord: si alguien esta ensordecido se ve SOLO el icono de
+  // ensordecido (no el de mute, que tambien tendria), para distinguirlos.
+  const showMute = () => isMuted() && (!props.deafened || isMuted() === "by-user");
+
   return (
     <>
-      <Show when={isMuted()}>
+      <Show when={props.deafened}>
+        <Symbol
+          size={16}
+          color="var(--md-sys-color-error)"
+          use:floating={{
+            tooltip: { placement: "top", content: t`Deafened` },
+          }}
+        >
+          headset_off
+        </Symbol>
+      </Show>
+      <Show when={showMute()}>
         <Symbol
           size={16}
           color={
@@ -42,9 +57,6 @@ export function VoiceStatefulUserIcons(props: {
         >
           mic_off
         </Symbol>
-      </Show>
-      <Show when={props.deafened}>
-        <Symbol size={16}>headset_off</Symbol>
       </Show>
       <Show when={props.camera}>
         <Symbol size={16}>camera_video</Symbol>

@@ -14,7 +14,7 @@ import { styled } from "styled-system/jsx";
 
 import { UserContextMenu } from "@revolt/app";
 import { useUser } from "@revolt/markdown/users";
-import { InRoom } from "@revolt/rtc";
+import { InRoom, useVoice } from "@revolt/rtc";
 
 import { Avatar, Ripple, typography } from "../../design";
 import { Row } from "../../layout";
@@ -80,13 +80,21 @@ function ParticipantLive() {
   });
 
   const isSpeaking = useIsSpeaking(participant);
+  const voice = useVoice();
+  const me = useUser(() => participant.identity);
 
   return (
     <CommonUser
       userId={participant.identity}
       speaking={isSpeaking()}
       muted={isMuted()}
-      deafened={false}
+      deafened={
+        me().user?.self
+          ? voice.deafen()
+          : voice.channel()?.voiceParticipants
+              .get(participant.identity)
+              ?.isReceiving() === false
+      }
       camera={false}
       screenshare={false}
       isLive

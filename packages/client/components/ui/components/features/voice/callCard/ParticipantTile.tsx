@@ -168,6 +168,13 @@ export function ParticipantTile(props: TileProps) {
                 <VoiceStatefulUserIcons
                   userId={participant.identity}
                   muted={isMuted()}
+                  deafened={
+                    user().user!.self
+                      ? voice.deafen()
+                      : voice.channel()?.voiceParticipants
+                          .get(participant.identity)
+                          ?.isReceiving() === false
+                  }
                   camera={isVideo()}
                 />
               )}
