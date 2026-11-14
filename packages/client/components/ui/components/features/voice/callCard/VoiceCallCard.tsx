@@ -276,8 +276,40 @@ export function VoiceChannelCallCardMount(props: { channel: Channel }) {
     setInfo();
   });
 
-  return <div ref={ref!} />;
+  // Estando en una llamada de otro canal (p. ej. un privado), este canal no
+  // ofrecía unirse y había que colgar antes. Mostramos la tarjeta "Cambiar a
+  // este canal de voz"; connect() ya abandona la llamada actual por sí solo.
+  const inOtherCall = () => {
+    const vc = voice.channel();
+    return !!vc && vc.id !== props.channel.id && voice.showCard(props.channel);
+  };
+
+  return (
+    <div ref={ref!} style={{ position: "relative" }}>
+      <Show when={inOtherCall()}>
+        <SwitchWrap>
+          <Card active={false}>
+            <VoiceCallCardPreview channel={props.channel} />
+          </Card>
+        </SwitchWrap>
+      </Show>
+    </div>
+  );
 }
+
+const SwitchWrap = styled("div", {
+  base: {
+    position: "absolute",
+    top: "var(--gap-md)",
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    display: "flex",
+    justifyContent: "center",
+    padding: "var(--gap-md)",
+    pointerEvents: "none",
+  },
+});
 
 /**
  * Call card
