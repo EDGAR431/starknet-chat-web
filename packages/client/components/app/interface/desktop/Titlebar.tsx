@@ -30,7 +30,10 @@ const isNative = !!window.native;
  * por lo que sea la región nativa falla, el clic sí llega aquí y le pedimos a
  * la app de escritorio que mueva la ventana siguiendo el cursor.
  */
-function fallbackDragHandlers(maximise: () => void) {
+function fallbackDragHandlers(
+  maximise: () => void,
+  setDragging: (v: boolean) => void,
+) {
   return {
     onPointerDown: (e: PointerEvent & { currentTarget: HTMLElement }) => {
       if (!isNative || isMacOS || e.button !== 0) return;
@@ -43,6 +46,7 @@ function fallbackDragHandlers(maximise: () => void) {
         /* ignorar */
       }
       const end = () => {
+        setDragging(false);
         window.native.dragEnd?.();
         el.removeEventListener("pointerup", end);
         el.removeEventListener("pointercancel", end);
@@ -58,6 +62,7 @@ function fallbackDragHandlers(maximise: () => void) {
       window.addEventListener("pointerup", end, true);
       window.addEventListener("pointercancel", end, true);
       window.addEventListener("blur", end);
+      setDragging(true);
       window.native.dragStart();
     },
     onDblClick: (e: MouseEvent) => {
@@ -92,7 +97,15 @@ export function Titlebar() {
     setIsMaximised((t) => !t);
   }
 
-  const dragHandlers = fallbackDragHandlers(maximise);
+  // Mientras la ventana esta maximizada (o durante un arrastre nuestro) la
+  // region nativa `drag` se quita: en Windows se come los clics sin mover nada
+  // y solo dejaba arrastrar por los bordes. Asi el arrastre lo gestiona la web
+  // en TODA la barra. Con la ventana normal se usa el arrastre nativo.
+  const [dragging, setDragging] = createSignal(false);
+  const dragRegion = () =>
+    isMaximised() || dragging() ? "no-drag" : "drag";
+
+  const dragHandlers = fallbackDragHandlers(maximise, setDragging);
 
   return (
     <Presence>
@@ -115,7 +128,7 @@ export function Titlebar() {
               onDblClick={dragHandlers.onDblClick}
               style={{
                 "-webkit-user-select": "none",
-                "-webkit-app-region": "drag",
+                "-webkit-app-region": dragRegion(),
               }}
             >
               <Wordmark
@@ -134,7 +147,7 @@ export function Titlebar() {
               onDblClick={dragHandlers.onDblClick}
               style={{
                 "-webkit-user-select": "none",
-                "-webkit-app-region": "drag",
+                "-webkit-app-region": dragRegion(),
               }}
             >
               <Switch>
