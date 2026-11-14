@@ -580,19 +580,32 @@ export class VoiceProcessor implements TrackProcessor<
     buffer: AudioBuffer,
     volume: number,
     monitor = true,
-  ): void {
-    if (!this.audioContext || !this.soundboardBusNode) return;
+  ): boolean {
+    const context = this.audioContext;
+    if (!context || !this.soundboardBusNode) {
+      voiceLog("warn", "soundboard: la cadena de audio aun no esta lista");
+      return false;
+    }
 
-    const source = this.audioContext.createBufferSource();
+    // Un contexto propio creado sin gesto del usuario puede estar suspendido
+    if (context.state !== "running") {
+      void context.resume().catch(() => {});
+    }
+    voiceLog(
+      "info",
+      `soundboard: ${buffer.duration.toFixed(1)} s, volumen ${volume.toFixed(2)}, contexto ${context.state} a ${context.sampleRate} Hz`,
+    );
+
+    const source = context.createBufferSource();
     source.buffer = buffer;
 
-    const gain = this.audioContext.createGain();
+    const gain = context.createGain();
     gain.gain.value = volume;
 
     source.connect(gain);
     gain.connect(this.soundboardBusNode);
     if (monitor) {
-      gain.connect(this.audioContext.destination);
+      gain.connect(context.destination);
     }
 
     source.addEventListener("ended", () => {
@@ -601,5 +614,6 @@ export class VoiceProcessor implements TrackProcessor<
     });
 
     source.start();
+    return true;
   }
 }

@@ -45,7 +45,7 @@ import { RoomAudioManager } from "./components/RoomAudioManager";
 import { distributeNewCallKey, listenForIncomingCallKey } from "../../src/e2ee/callKeyExchange";
 import { wrapCallKeyForParticipant, importPublicKey } from "../../src/e2ee/cryptoEngine";
 import { ensureDeviceKeyUploaded, getDeviceId, getOrCreateDeviceKeyPair } from "../../src/e2ee/deviceIdentity";
-import { VoiceProcessor } from "./VoiceProcessor";
+import { VoiceProcessor, voiceLog } from "./VoiceProcessor";
 
 type State =
   | "READY"
@@ -710,17 +710,30 @@ class Voice {
    * volumen maestro del soundboard
    */
   async playSoundboardSound(fileId: string, volume: number): Promise<void> {
-    if (!this.voiceProcessor) {
-      console.warn(
-        "[soundboard] no hay una llamada de voz activa, no se puede reproducir el sonido",
-      );
-      return;
-    }
-
     try {
       const buffer = await this.loadSoundboardBuffer(fileId);
-      this.voiceProcessor.playSoundboardSound(buffer, volume);
+
+      if (this.voiceProcessor?.playSoundboardSound(buffer, volume)) return;
+
+      // Sin cadena de audio saliente (p. ej. se entro con el micro apagado y
+      // aun no se ha publicado): al menos se oye en local.
+      voiceLog(
+        "warn",
+        "soundboard: sin cadena de audio saliente; se reproduce solo en local",
+      );
+      const ctx = this.#soundboardDecodeContext;
+      if (ctx) {
+        if (ctx.state !== "running") await ctx.resume().catch(() => {});
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        source.buffer = buffer;
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.start();
+      }
     } catch (e) {
+      voiceLog("error", "soundboard: no se pudo reproducir el sonido", e);
       console.error("[soundboard] no se pudo reproducir el sonido:", e);
     }
   }
@@ -744,7 +757,10 @@ class Voice {
       if (!this.#soundboardDecodeContext) {
         this.#soundboardDecodeContext = new AudioContext();
       }
-      return this.#soundboardDecodeContext.decodeAudioData(arrayBuffer);
+      const decoded =
+        await this.#soundboardDecodeContext.decodeAudioData(arrayBuffer);
+      voiceLog("info", `soundboard: sonido ${fileId} decodificado (${decoded.duration.toFixed(1)} s)`);
+      return decoded;
     })();
 
     // Si falla, no dejamos la promesa rota en caché — así un próximo intento
