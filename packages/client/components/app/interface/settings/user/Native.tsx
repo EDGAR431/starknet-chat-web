@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { Match, Show, Switch, createSignal, onMount } from "solid-js";
 
 import { Trans, useLingui } from "@lingui/solid/macro";
 
@@ -32,6 +32,12 @@ declare global {
       close(): void;
       /** arrastre de respaldo de la barra de título (≥ 1.7) */
       onMaximisedChange?(cb: (maximised: boolean) => void): void;
+      /** actualizaciones propias (>= 1.7): busca ahora y devuelve el estado */
+      checkForUpdates?(): Promise<
+        "unsupported" | "up-to-date" | "downloading" | "ready" | "error"
+      >;
+      installUpdate?(): void;
+      onUpdateReady?(cb: () => void): void;
       dragStart?(): void;
       dragEnd?(): void;
       onceScreenPicker(
@@ -68,6 +74,29 @@ export default function Native() {
   const { t } = useLingui();
   const [autostart, setAutostart] = createSignal(false);
   const [config, setConfig] = createSignal(window.desktopConfig.get());
+  const [updateStatus, setUpdateStatus] = createSignal<
+    | "idle"
+    | "checking"
+    | "unsupported"
+    | "up-to-date"
+    | "downloading"
+    | "ready"
+    | "error"
+  >("idle");
+
+  async function checkUpdates() {
+    if (updateStatus() === "checking") return;
+    if (updateStatus() === "ready") {
+      window.native.installUpdate?.();
+      return;
+    }
+    setUpdateStatus("checking");
+    try {
+      setUpdateStatus((await window.native.checkForUpdates!()) ?? "error");
+    } catch {
+      setUpdateStatus("error");
+    }
+  }
 
   function set(config: Partial<DesktopConfig>) {
     window.desktopConfig.set(config);
@@ -75,6 +104,7 @@ export default function Native() {
   }
 
   onMount(async () => {
+    window.native.onUpdateReady?.(() => setUpdateStatus("ready"));
     const value = await window.desktopConfig.getAutostart();
     setAutostart(value);
   });
@@ -180,6 +210,39 @@ export default function Native() {
         >
           <Trans>StarknetChat for Desktop</Trans>
         </CategoryButton>
+        <Show when={window.native.checkForUpdates}>
+          <CategoryButton
+            icon={<Symbol>update</Symbol>}
+            onClick={checkUpdates}
+            description={
+              <Switch fallback={<Trans>Look for a newer version now.</Trans>}>
+                <Match when={updateStatus() === "checking"}>
+                  <Trans>Checking…</Trans>
+                </Match>
+                <Match when={updateStatus() === "up-to-date"}>
+                  <Trans>You are on the latest version.</Trans>
+                </Match>
+                <Match when={updateStatus() === "downloading"}>
+                  <Trans>
+                    Downloading the update… It will be installed when you
+                    restart.
+                  </Trans>
+                </Match>
+                <Match when={updateStatus() === "ready"}>
+                  <Trans>Update ready. Click to restart and install.</Trans>
+                </Match>
+                <Match when={updateStatus() === "unsupported"}>
+                  <Trans>Updates are managed by the Microsoft Store.</Trans>
+                </Match>
+                <Match when={updateStatus() === "error"}>
+                  <Trans>Couldn't check for updates. Try again later.</Trans>
+                </Match>
+              </Switch>
+            }
+          >
+            <Trans>Check for updates</Trans>
+          </CategoryButton>
+        </Show>
       </CategoryButton.Group>
     </Column>
   );

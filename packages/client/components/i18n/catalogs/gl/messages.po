@@ -3875,3 +3875,35 @@ msgstr "Descargar para Windows (instalador)"
 #: components/app/interface/settings/user/Apps.tsx
 msgid "If Windows SmartScreen warns you when opening the installer, choose \"More info\" and then \"Run anyway\". The installer is not signed yet."
 msgstr "Se Windows SmartScreen che avisa ao abrir o instalador, escolle \"Máis información\" e despois \"Executar igualmente\". O instalador aínda non está asinado."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Check for updates"
+msgstr "Buscar actualizacións"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Look for a newer version now."
+msgstr "Busca agora unha versión máis recente."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Checking…"
+msgstr "Comprobando…"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "You are on the latest version."
+msgstr "Tes a última versión."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Downloading the update… It will be installed when you restart."
+msgstr "Descargando a actualización… Instalarase ao reiniciar."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Update ready. Click to restart and install."
+msgstr "Actualización lista. Preme para reiniciar e instalar."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Updates are managed by the Microsoft Store."
+msgstr "As actualizacións xestiónaas a Microsoft Store."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Couldn't check for updates. Try again later."
+msgstr "Non se puido buscar actualizacións. Téntao máis tarde."

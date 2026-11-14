@@ -4023,3 +4023,35 @@ msgstr "Si Windows SmartScreen le avisa al abrir el instalador, elija \"Más inf
 
 #~ msgid "You were logged out!"
 #~ msgstr "¡Has cerrado sesión!"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Look for a newer version now."
+msgstr "Busca ahora una versión más reciente."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Checking…"
+msgstr "Comprobando…"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "You are on the latest version."
+msgstr "Tienes la última versión."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Downloading the update… It will be installed when you restart."
+msgstr "Descargando la actualización… Se instalará al reiniciar."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Update ready. Click to restart and install."
+msgstr "Actualización lista. Pulsa para reiniciar e instalar."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Updates are managed by the Microsoft Store."
+msgstr "Las actualizaciones las gestiona la Microsoft Store."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Couldn't check for updates. Try again later."
+msgstr "No se pudo buscar actualizaciones. Inténtalo más tarde."
