@@ -1,10 +1,20 @@
 import { AudioProcessorOptions, Track, TrackProcessor } from "livekit-client";
 import { DeepFilterNet3Core } from "deepfilternet3-noise-filter";
 import { RNNoiseNode } from "livekit-rnnoise-processor";
-import { createEffect, createRoot, on } from "solid-js";
+import { createEffect, createRoot, createSignal, on } from "solid-js";
 
 import { CONFIGURATION } from "@revolt/common";
 import { Voice } from "@revolt/state/stores/Voice";
+
+/**
+ * Estado del procesado de voz para mostrarlo en Ajustes > Voz (diagnostico):
+ * motor activo y frecuencia de muestreo con la que trabaja.
+ */
+export const [voiceProcessorStatus, setVoiceProcessorStatus] =
+  createSignal<string>("");
+
+/** RNNoise y DeepFilterNet3 solo funcionan bien a 48 kHz */
+const WORK_SAMPLE_RATE = 48000;
 
 export class VoiceProcessor implements TrackProcessor<
   Track.Kind.Audio,
@@ -33,6 +43,14 @@ export class VoiceProcessor implements TrackProcessor<
   private soundboardBusNode?: GainNode;
 
   private rnnoiseAvailable = false;
+  /** Contextos donde ya se cargo el worklet de RNNoise */
+  private rnnoiseContexts = new WeakSet<BaseAudioContext>();
+  /**
+   * Contexto propio a 48 kHz, creado solo si el que da LiveKit trabaja a otra
+   * frecuencia (auriculares Bluetooth a 44,1/16 kHz, interfaces a 96 kHz...).
+   * Con otra frecuencia el filtro de ruido sale distorsionado o mudo.
+   */
+  private ownContext?: AudioContext;
 
   // DeepFilterNet3 (opcional, experimental)
   private dfnCore?: DeepFilterNet3Core;
@@ -145,9 +163,40 @@ export class VoiceProcessor implements TrackProcessor<
     }
   }
 
+  /**
+   * Contexto de audio donde se monta la cadena: el de LiveKit si ya va a
+   * 48 kHz; si no, uno propio a 48 kHz (el navegador remuestrea la entrada).
+   */
+  private workContext(base?: AudioContext): AudioContext {
+    if (base && base.sampleRate === WORK_SAMPLE_RATE) {
+      return base;
+    }
+    if (this.ownContext && this.ownContext.state !== "closed") {
+      return this.ownContext;
+    }
+    if (!base) {
+      return this.audioContext!;
+    }
+    console.warn(
+      `[voice] el audio va a ${base.sampleRate} Hz; se usa un contexto a 48 kHz para el filtro de ruido`,
+    );
+    try {
+      this.ownContext = new AudioContext({
+        sampleRate: WORK_SAMPLE_RATE,
+        latencyHint: "interactive",
+      });
+      void this.ownContext.resume().catch(() => {});
+      return this.ownContext;
+    } catch (err) {
+      console.error("[voice] no se pudo crear un contexto a 48 kHz", err);
+      return base;
+    }
+  }
+
   async init(opts: AudioProcessorOptions): Promise<void> {
-    await this.loadRnnoise(opts.audioContext);
-    await this.prepareDeepFilter(opts.audioContext);
+    const context = this.workContext(opts.audioContext);
+    await this.loadRnnoise(context);
+    await this.prepareDeepFilter(context);
     return this.build(opts);
   }
 
@@ -190,6 +239,7 @@ export class VoiceProcessor implements TrackProcessor<
           if (!isWasm) throw new Error("rnnoise.wasm no válido en " + cdn);
         }
         await RNNoiseNode.loadModule(context, cdn);
+        this.rnnoiseContexts.add(context);
         this.rnnoiseAvailable = true;
         return;
       } catch (err) {
@@ -209,7 +259,12 @@ export class VoiceProcessor implements TrackProcessor<
     // Destroy the solid context on processor destruction
     this.disposeSolidjsContext();
     this.audioContext = undefined;
-    return this.teardown();
+    await this.teardown();
+    if (this.ownContext) {
+      void this.ownContext.close().catch(() => {});
+      this.ownContext = undefined;
+    }
+    setVoiceProcessorStatus("");
   }
 
   private updateNoiseSuppression(context: AudioContext) {
@@ -248,6 +303,21 @@ export class VoiceProcessor implements TrackProcessor<
         this.rnnoiseAvailable = false;
       }
     }
+
+    const engine = node
+      ? node === this.dfnNode
+        ? "DeepFilterNet3"
+        : "RNNoise"
+      : this.settings.noiseSupression === "browser"
+        ? "navegador"
+        : this.settings.noiseSupression === "disabled"
+          ? "desactivado"
+          : "sin filtro (no se pudo cargar)";
+    setVoiceProcessorStatus(
+      `${engine} · ${context.sampleRate} Hz${
+        this.ownContext === context ? " (remuestreado)" : ""
+      }`,
+    );
 
     if (node) {
       // Create a new highpass filter
@@ -292,16 +362,15 @@ export class VoiceProcessor implements TrackProcessor<
 
   private async build(opts: AudioProcessorOptions): Promise<void> {
     await this.teardown();
-    // If context was passed, store it for restarts
-    // If no context was passed, this was a restart so use the old context
-    let context = opts.audioContext;
-    if (!context) {
-      context = this.audioContext!;
-    } else {
-      this.audioContext = context;
-    }
+    // Contexto de trabajo (48 kHz); en un reinicio sin contexto se reutiliza
+    const context = this.workContext(opts.audioContext);
+    this.audioContext = context;
     if (!context) {
       return;
+    }
+    if (!this.rnnoiseContexts.has(context)) {
+      this.rnnoiseAvailable = false;
+      await this.loadRnnoise(context);
     }
     this.sourceNode = context.createMediaStreamSource(
       new MediaStream([opts.track]),

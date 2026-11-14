@@ -72,7 +72,6 @@ function fallbackDragHandlers(
         el.removeEventListener("lostpointercapture", end);
         window.removeEventListener("pointerup", end, true);
         window.removeEventListener("pointercancel", end, true);
-        window.removeEventListener("blur", end);
       };
       el.addEventListener("pointerup", end);
       el.addEventListener("pointercancel", end);
@@ -80,7 +79,6 @@ function fallbackDragHandlers(
       // respaldo: al restaurar la ventana la captura del puntero puede perderse
       window.addEventListener("pointerup", end, true);
       window.addEventListener("pointercancel", end, true);
-      window.addEventListener("blur", end);
       setDragging(true);
       window.native.dragStart();
     },

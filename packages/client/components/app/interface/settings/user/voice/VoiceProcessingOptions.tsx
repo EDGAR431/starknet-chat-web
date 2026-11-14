@@ -1,5 +1,8 @@
+import { Show } from "solid-js";
+
 import { Trans } from "@lingui/solid/macro";
 
+import { voiceProcessorStatus } from "@revolt/rtc/VoiceProcessor";
 import { useState } from "@revolt/state";
 import { CategoryButton, Checkbox, Column, Text } from "@revolt/ui";
 
@@ -63,6 +66,9 @@ export function VoiceProcessingOptions() {
           <Trans>Automatic Gain Control</Trans>
         </CategoryButton>
       </CategoryButton.Group>
+      <Show when={voiceProcessorStatus()}>
+        <Text class="label">Audio: {voiceProcessorStatus()}</Text>
+      </Show>
     </Column>
   );
 }
