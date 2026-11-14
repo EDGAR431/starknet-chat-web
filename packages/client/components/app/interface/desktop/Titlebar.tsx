@@ -24,6 +24,43 @@ import {
 const isMacOS = navigator.platform.startsWith("Mac");
 const isNative = !!window.native;
 
+/**
+ * Arrastre de respaldo. Normalmente `-webkit-app-region: drag` hace todo el
+ * trabajo y estos eventos NO llegan a la página (el sistema se los queda). Si
+ * por lo que sea la región nativa falla, el clic sí llega aquí y le pedimos a
+ * la app de escritorio que mueva la ventana siguiendo el cursor.
+ */
+function fallbackDragHandlers(maximise: () => void) {
+  return {
+    onPointerDown: (e: PointerEvent & { currentTarget: HTMLElement }) => {
+      if (!isNative || isMacOS || e.button !== 0) return;
+      if ((e.target as HTMLElement).closest("a,button")) return;
+      if (!window.native.dragStart) return;
+      const el = e.currentTarget;
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignorar */
+      }
+      const end = () => {
+        window.native.dragEnd?.();
+        el.removeEventListener("pointerup", end);
+        el.removeEventListener("pointercancel", end);
+        el.removeEventListener("lostpointercapture", end);
+      };
+      el.addEventListener("pointerup", end);
+      el.addEventListener("pointercancel", end);
+      el.addEventListener("lostpointercapture", end);
+      window.native.dragStart();
+    },
+    onDblClick: (e: MouseEvent) => {
+      if (!isNative || isMacOS) return;
+      if ((e.target as HTMLElement).closest("a,button")) return;
+      maximise();
+    },
+  };
+}
+
 export function Titlebar() {
   const [isMaximised, setIsMaximised] = createSignal(
     isNative ? window.desktopConfig.get().windowState.isMaximised : false,
@@ -44,6 +81,8 @@ export function Titlebar() {
     setIsMaximised((t) => !t);
   }
 
+  const dragHandlers = fallbackDragHandlers(maximise);
+
   return (
     <Presence>
       <Show
@@ -61,6 +100,8 @@ export function Titlebar() {
           <Base disconnected={isDisconnected()}>
             <Title
               macos={isMacOS}
+              onPointerDown={dragHandlers.onPointerDown}
+              onDblClick={dragHandlers.onDblClick}
               style={{
                 "-webkit-user-select": "none",
                 "-webkit-app-region": "drag",
@@ -78,6 +119,8 @@ export function Titlebar() {
             </Title>
             <DragHandle
               macos={isMacOS && isNative}
+              onPointerDown={dragHandlers.onPointerDown}
+              onDblClick={dragHandlers.onDblClick}
               style={{
                 "-webkit-user-select": "none",
                 "-webkit-app-region": "drag",

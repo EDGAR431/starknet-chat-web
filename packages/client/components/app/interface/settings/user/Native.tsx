@@ -30,6 +30,9 @@ declare global {
       minimise(): void;
       maximise(): void;
       close(): void;
+      /** arrastre de respaldo de la barra de título (≥ 1.7) */
+      dragStart?(): void;
+      dragEnd?(): void;
       onceScreenPicker(
         onScreenPick: (
           sources: {
