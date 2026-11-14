@@ -4,7 +4,7 @@ import {
   browserPreferredLanguage,
   loadAndSwitchLocale,
 } from "@revolt/i18n";
-import type { LocaleOptions } from "@revolt/i18n/Languages";
+import { type LocaleOptions, VISIBLE_LANGUAGES } from "@revolt/i18n/Languages";
 import { updateTimeLocaleOptions } from "@revolt/i18n/dayjs";
 
 import { State } from "..";
@@ -58,7 +58,13 @@ export class Locale extends AbstractStore<"locale", TypeLocale> {
    */
   clean(input: Partial<TypeLocale>): TypeLocale {
     let lang: Language = input.lang!;
-    if (!(lang in Languages)) {
+    // el español de Latinoamérica pasa al español general
+    if (lang === Language.SPANISH_LATIN_AMERICA) {
+      lang = Language.SPANISH;
+    }
+    // idiomas ocultos o desconocidos: se fuerza el cambio al idioma detectado
+    // (solo entre los visibles; si no hay coincidencia, inglés)
+    if (!(lang in Languages) || !VISIBLE_LANGUAGES.includes(lang)) {
       lang = this.default().lang;
     }
 
