@@ -47,10 +47,17 @@ function fallbackDragHandlers(maximise: () => void) {
         el.removeEventListener("pointerup", end);
         el.removeEventListener("pointercancel", end);
         el.removeEventListener("lostpointercapture", end);
+        window.removeEventListener("pointerup", end, true);
+        window.removeEventListener("pointercancel", end, true);
+        window.removeEventListener("blur", end);
       };
       el.addEventListener("pointerup", end);
       el.addEventListener("pointercancel", end);
       el.addEventListener("lostpointercapture", end);
+      // respaldo: al restaurar la ventana la captura del puntero puede perderse
+      window.addEventListener("pointerup", end, true);
+      window.addEventListener("pointercancel", end, true);
+      window.addEventListener("blur", end);
       window.native.dragStart();
     },
     onDblClick: (e: MouseEvent) => {
