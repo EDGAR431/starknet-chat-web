@@ -1,4 +1,11 @@
-import { Match, Show, Switch, createSignal, onMount } from "solid-js";
+import {
+  Match,
+  Show,
+  Switch,
+  createSignal,
+  onCleanup,
+  onMount,
+} from "solid-js";
 import { Motion, Presence } from "solid-motionone";
 
 import { css } from "styled-system/css";
@@ -30,6 +37,18 @@ const isNative = !!window.native;
  * por lo que sea la región nativa falla, el clic sí llega aquí y le pedimos a
  * la app de escritorio que mueva la ventana siguiendo el cursor.
  */
+/** La ventana ocupa (casi) todo el area util del monitor: esta maximizada */
+function fillsScreen(): boolean {
+  try {
+    return (
+      window.outerWidth >= window.screen.availWidth - 16 &&
+      window.outerHeight >= window.screen.availHeight - 16
+    );
+  } catch {
+    return false;
+  }
+}
+
 function fallbackDragHandlers(
   maximise: () => void,
   setDragging: (v: boolean) => void,
@@ -102,8 +121,17 @@ export function Titlebar() {
   // y solo dejaba arrastrar por los bordes. Asi el arrastre lo gestiona la web
   // en TODA la barra. Con la ventana normal se usa el arrastre nativo.
   const [dragging, setDragging] = createSignal(false);
+  // Ademas del aviso del escritorio, se mira el tamano real de la ventana: si
+  // el aviso no llega (escritorio antiguo, estado desincronizado) la barra no
+  // se queda con la region nativa rota.
+  const [fills, setFills] = createSignal(fillsScreen());
+  onMount(() => {
+    const check = () => setFills(fillsScreen());
+    window.addEventListener("resize", check);
+    onCleanup(() => window.removeEventListener("resize", check));
+  });
   const dragRegion = () =>
-    isMaximised() || dragging() ? "no-drag" : "drag";
+    isMaximised() || fills() || dragging() ? "no-drag" : "drag";
 
   const dragHandlers = fallbackDragHandlers(maximise, setDragging);
 
