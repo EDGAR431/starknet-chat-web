@@ -24,7 +24,12 @@ import {
 } from "@revolt/rtc/serverSoundboard";
 import { useState } from "@revolt/state";
 import type { SoundboardSound } from "@revolt/state";
-import { Button, IconButton, TextField } from "@revolt/ui/components/design";
+import {
+  Button,
+  IconButton,
+  Slider,
+  TextField,
+} from "@revolt/ui/components/design";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
 
 /**
@@ -319,6 +324,23 @@ function SoundboardPanel(props: {
           }
         >
           <Scroll>
+            <VolumeRow>
+              <Symbol size={18}>
+                {state.soundboard.masterVolume === 0 ? "volume_off" : "volume_up"}
+              </Symbol>
+              <Slider
+                min={0}
+                max={1.5}
+                step={0.05}
+                value={state.soundboard.masterVolume}
+                onInput={(event) =>
+                  (state.soundboard.masterVolume = Number(
+                    event.currentTarget.value,
+                  ))
+                }
+                labelFormatter={(label) => (label * 100).toFixed(0) + "%"}
+              />
+            </VolumeRow>
             <Header>
               <Trans>Mi soundboard</Trans>
             </Header>
@@ -444,6 +466,16 @@ const Scroll = styled("div", {
     flexDirection: "column",
     gap: "var(--gap-sm)",
     overflowY: "auto",
+  },
+});
+
+const VolumeRow = styled("div", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--gap-md)",
+    padding: "var(--gap-xs) var(--gap-sm)",
+    color: "var(--md-sys-color-on-surface-variant)",
   },
 });
 
