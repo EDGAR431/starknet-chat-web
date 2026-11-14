@@ -4316,3 +4316,15 @@ msgstr "Press the new key combination or a mouse button. Backspace removes it, E
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
 msgid "Mouse buttons and single keys only work while StarknetChat is focused."
 msgstr "Mouse buttons and single keys only work while StarknetChat is focused."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copy audio log"
+msgstr "Copy audio log"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copied. Paste it in a message to the person helping you."
+msgstr "Copied. Paste it in a message to the person helping you."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Technical details to find out why the microphone or noise suppression fails."
+msgstr "Technical details to find out why the microphone or noise suppression fails."

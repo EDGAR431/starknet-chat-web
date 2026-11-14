@@ -1,8 +1,8 @@
-import { Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 
 import { Trans } from "@lingui/solid/macro";
 
-import { voiceProcessorStatus } from "@revolt/rtc/VoiceProcessor";
+import { getVoiceLog, voiceProcessorStatus } from "@revolt/rtc/VoiceProcessor";
 import { useState } from "@revolt/state";
 import { CategoryButton, Checkbox, Column, Text } from "@revolt/ui";
 
@@ -14,6 +14,24 @@ const LOW_CORES = (navigator.hardwareConcurrency ?? 8) <= 4;
  */
 export function VoiceProcessingOptions() {
   const { voice } = useState();
+  const [copied, setCopied] = createSignal(false);
+
+  /** Copia el registro de audio (o lo descarga como .log si no se puede copiar) */
+  async function copyLog() {
+    const text = getVoiceLog(voice);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "starknetchat-audio.log";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 4000);
+  }
 
   return (
     <Column>
@@ -69,6 +87,26 @@ export function VoiceProcessingOptions() {
       <Show when={voiceProcessorStatus()}>
         <Text class="label">Audio: {voiceProcessorStatus()}</Text>
       </Show>
+      <CategoryButton.Group>
+        <CategoryButton
+          icon="blank"
+          description={
+            copied() ? (
+              <Trans>
+                Copied. Paste it in a message to the person helping you.
+              </Trans>
+            ) : (
+              <Trans>
+                Technical details to find out why the microphone or noise
+                suppression fails.
+              </Trans>
+            )
+          }
+          onClick={() => void copyLog()}
+        >
+          <Trans>Copy audio log</Trans>
+        </CategoryButton>
+      </CategoryButton.Group>
     </Column>
   );
 }

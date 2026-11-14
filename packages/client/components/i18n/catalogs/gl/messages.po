@@ -3951,3 +3951,15 @@ msgstr "Preme a nova combinación de teclas ou un botón do rato. Retroceso bór
 #: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
 msgid "Mouse buttons and single keys only work while StarknetChat is focused."
 msgstr "Os botóns do rato e as teclas soltas só funcionan con StarknetChat en primeiro plano."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copy audio log"
+msgstr "Copiar rexistro de audio"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copied. Paste it in a message to the person helping you."
+msgstr "Copiado. Pégao nunha mensaxe a quen che estea axudando."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Technical details to find out why the microphone or noise suppression fails."
+msgstr "Datos técnicos para descubrir por que falla o micrófono ou a supresión de ruído."

@@ -13,6 +13,45 @@ import { Voice } from "@revolt/state/stores/Voice";
 export const [voiceProcessorStatus, setVoiceProcessorStatus] =
   createSignal<string>("");
 
+const LOG_MAX = 300;
+const logLines: string[] = [];
+
+/**
+ * Registro del procesado de voz: se guarda en memoria (no sale del equipo) y
+ * el usuario puede copiarlo desde Ajustes > Voz para ensenarlo a quien le
+ * ayude cuando el microfono o la supresion de ruido fallan.
+ */
+export function voiceLog(
+  level: "info" | "warn" | "error",
+  msg: string,
+  err?: unknown,
+) {
+  const detail = err
+    ? ` | ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`
+    : "";
+  logLines.push(
+    `${new Date().toISOString().slice(11, 23)} [${level}] ${msg}${detail}`,
+  );
+  if (logLines.length > LOG_MAX) logLines.shift();
+  const fn = level === "info" ? console.info : console[level];
+  fn("[voice]", msg, err ?? "");
+}
+
+/** Texto completo del registro, con datos del equipo, listo para copiar */
+export function getVoiceLog(settings?: Voice): string {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const head = [
+    "== Registro de audio de StarknetChat ==",
+    `Fecha: ${new Date().toISOString()}`,
+    `Navegador/app: ${navigator.userAgent}`,
+    `CPU (hilos): ${navigator.hardwareConcurrency ?? "?"} · RAM aprox.: ${nav.deviceMemory ?? "?"} GB`,
+    `Supresion elegida: ${settings?.noiseSupression ?? "?"}`,
+    `Estado actual: ${voiceProcessorStatus() || "(sin llamada)"}`,
+    "",
+  ];
+  return [...head, ...logLines].join("\n");
+}
+
 /** RNNoise y DeepFilterNet3 solo funcionan bien a 48 kHz */
 const WORK_SAMPLE_RATE = 48000;
 
@@ -125,7 +164,7 @@ export class VoiceProcessor implements TrackProcessor<
     if (this.settings.noiseSupression !== "deepfilter") return;
     if (!this.dfnAvailable || this.dfnBroken || this.dfnNode) return;
     if (context.sampleRate !== 48000) {
-      console.warn("[voice] DeepFilterNet3 necesita 48 kHz, usando RNNoise");
+      voiceLog("warn", "DeepFilterNet3 necesita 48 kHz, usando RNNoise");
       this.dfnAvailable = false;
       return;
     }
@@ -156,8 +195,9 @@ export class VoiceProcessor implements TrackProcessor<
         this.dfnCore = core;
       }
       this.dfnNode = await this.dfnCore.createAudioWorkletNode(context);
+      voiceLog("info", "DeepFilterNet3 cargado");
     } catch (err) {
-      console.error("[voice] DeepFilterNet3 no disponible, usando RNNoise", err);
+      voiceLog("error", "DeepFilterNet3 no disponible, usando RNNoise", err);
       this.dfnAvailable = false;
       this.dfnNode = undefined;
     }
@@ -177,8 +217,9 @@ export class VoiceProcessor implements TrackProcessor<
     if (!base) {
       return this.audioContext!;
     }
-    console.warn(
-      `[voice] el audio va a ${base.sampleRate} Hz; se usa un contexto a 48 kHz para el filtro de ruido`,
+    voiceLog(
+      "warn",
+      `el audio va a ${base.sampleRate} Hz; se usa un contexto propio a 48 kHz para el filtro de ruido`,
     );
     try {
       this.ownContext = new AudioContext({
@@ -188,7 +229,7 @@ export class VoiceProcessor implements TrackProcessor<
       void this.ownContext.resume().catch(() => {});
       return this.ownContext;
     } catch (err) {
-      console.error("[voice] no se pudo crear un contexto a 48 kHz", err);
+      voiceLog("error", "no se pudo crear un contexto a 48 kHz", err);
       return base;
     }
   }
@@ -241,14 +282,15 @@ export class VoiceProcessor implements TrackProcessor<
         await RNNoiseNode.loadModule(context, cdn);
         this.rnnoiseContexts.add(context);
         this.rnnoiseAvailable = true;
+        voiceLog("info", `RNNoise cargado desde ${cdn ?? "CDN por defecto"}`);
         return;
       } catch (err) {
-        console.warn("[voice] RNNoise load failed from", cdn ?? "default", err);
+        voiceLog("warn", `RNNoise no cargo desde ${cdn ?? "CDN por defecto"}`, err);
       }
     }
 
     this.rnnoiseAvailable = false;
-    console.error("[voice] RNNoise unavailable, continuing without it");
+    voiceLog("error", "RNNoise no disponible, se sigue sin filtro");
   }
 
   async restart(opts: AudioProcessorOptions): Promise<void> {
@@ -299,7 +341,7 @@ export class VoiceProcessor implements TrackProcessor<
       try {
         node = new RNNoiseNode(this.audioContext!);
       } catch (err) {
-        console.error("[voice] could not create RNNoise node", err);
+        voiceLog("error", "no se pudo crear el nodo RNNoise", err);
         this.rnnoiseAvailable = false;
       }
     }
@@ -313,11 +355,11 @@ export class VoiceProcessor implements TrackProcessor<
         : this.settings.noiseSupression === "disabled"
           ? "desactivado"
           : "sin filtro (no se pudo cargar)";
-    setVoiceProcessorStatus(
-      `${engine} · ${context.sampleRate} Hz${
-        this.ownContext === context ? " (remuestreado)" : ""
-      }`,
-    );
+    const status = `${engine} · ${context.sampleRate} Hz${
+      this.ownContext === context ? " (remuestreado)" : ""
+    }`;
+    setVoiceProcessorStatus(status);
+    voiceLog("info", `cadena de audio: ${status}`);
 
     if (node) {
       // Create a new highpass filter
@@ -372,6 +414,15 @@ export class VoiceProcessor implements TrackProcessor<
       this.rnnoiseAvailable = false;
       await this.loadRnnoise(context);
     }
+    try {
+      const t = opts.track.getSettings();
+      voiceLog(
+        "info",
+        `microfono: "${opts.track.label}" ${t.sampleRate ?? "?"} Hz, ${t.channelCount ?? "?"} canal(es), eco=${t.echoCancellation} ruido=${t.noiseSuppression} agc=${t.autoGainControl}; contexto base ${opts.audioContext?.sampleRate ?? "?"} Hz (${opts.audioContext?.state ?? "?"}), trabajo ${context.sampleRate} Hz (${context.state})`,
+      );
+    } catch {
+      /* ignorar */
+    }
     this.sourceNode = context.createMediaStreamSource(
       new MediaStream([opts.track]),
     );
@@ -409,21 +460,28 @@ export class VoiceProcessor implements TrackProcessor<
 
   private startWatchdog() {
     let bad = 0;
+    let ticks = 0;
     this.watchdog = setInterval(() => {
       if (!this.inputAnalyser || !this.outputAnalyser) return;
       const input = this.rms(this.inputAnalyser);
       const output = this.rms(this.outputAnalyser);
+      if (++ticks === 6 || ticks === 20) {
+        voiceLog(
+          "info",
+          `nivel tras ${ticks / 2} s: entrada=${input.toFixed(4)} salida=${output.toFixed(4)}`,
+        );
+      }
       // audible mic input but dead-silent output => worklet is not running
       if (input > 0.02 && output < 1e-6) bad++;
       else if (output >= 1e-6) bad = 0;
       if (bad >= 6) {
         if (this.noiseSuppressionNode === this.dfnNode && this.dfnNode) {
-          console.error("[voice] DeepFilterNet3 output is silent, disabling it");
+          voiceLog("error", "DeepFilterNet3 da salida muda con voz en la entrada: se desactiva");
           this.dfnBroken = true;
           this.dfnNode?.disconnect();
           this.dfnNode = undefined;
         } else {
-          console.error("[voice] RNNoise output is silent, disabling it");
+          voiceLog("error", "RNNoise da salida muda con voz en la entrada: se desactiva");
           this.rnnoiseBroken = true;
         }
         this.stopWatchdog();
