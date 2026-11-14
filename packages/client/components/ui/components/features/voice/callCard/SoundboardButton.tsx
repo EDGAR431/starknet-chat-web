@@ -109,6 +109,10 @@ function SoundboardPanel(props: {
   const server = () => voice.channel()?.server;
   const canManageServerBoard = () =>
     server()?.havePermission("ManageCustomisation") ?? false;
+  // Quitar un sonido del servidor: solo el dueño del servidor (lo exige
+  // también el backend), para que nadie los borre a la ligera.
+  const isServerOwner = () =>
+    !!server() && server()!.ownerId === client().user?.id;
 
   const [serverSounds, setServerSounds] = createSignal<ServerSound[]>([]);
   const [loadingServerSounds, setLoadingServerSounds] = createSignal(false);
@@ -400,7 +404,7 @@ function SoundboardPanel(props: {
                           <span>{sound.emoji ?? "🔊"}</span>
                           <SoundName>{sound.name}</SoundName>
                         </SoundTileButton>
-                        <Show when={canManageServerBoard() && !sound.isDefault}>
+                        <Show when={isServerOwner() && !sound.isDefault}>
                           <RemoveButton
                             onClick={(e: MouseEvent) => {
                               e.stopPropagation();
