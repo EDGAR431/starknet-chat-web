@@ -8,7 +8,6 @@ import { Symbol } from "@revolt/ui/components/utils/Symbol";
 /** Instalador directo (se actualiza solo). Lo publica scripts/publish-update.ps1 */
 const UPDATES_BASE = "/desktop-updates/win32/x64";
 const DIRECT_INSTALLER_URL = `${UPDATES_BASE}/starknetchat-desktop-setup.exe`;
-const STORE_URL = "https://apps.microsoft.com/detail/9NMQ1VS1JQKN";
 
 /** true si ya hay una version directa publicada en el servidor */
 async function directInstallerAvailable() {
@@ -29,6 +28,7 @@ function open(url: string) {
 
 /**
  * Pagina "Aplicaciones": descargar la app de escritorio.
+ * (La opcion de la Microsoft Store se anadira mas adelante.)
  * Solo se muestra en la web (dentro de la app de escritorio no tiene sentido).
  */
 export function AppsSettings() {
@@ -42,33 +42,16 @@ export function AppsSettings() {
           description={
             <Show
               when={directAvailable()}
-              fallback={
-                <Trans>
-                  Not published yet. Use the Microsoft Store for now.
-                </Trans>
-              }
+              fallback={<Trans>Not available yet. Coming soon.</Trans>}
             >
               <Trans>
-                Windows installer. It updates itself in the background, with no
-                waiting for the Store.
+                Windows installer. It updates itself in the background.
               </Trans>
             </Show>
           }
           onClick={() => directAvailable() && open(DIRECT_INSTALLER_URL)}
         >
           <Trans>Download for Windows (installer)</Trans>
-        </CategoryButton>
-        <CategoryButton
-          icon={<Symbol>storefront</Symbol>}
-          description={
-            <Trans>
-              Install from the Microsoft Store. Updates arrive through the
-              Store.
-            </Trans>
-          }
-          onClick={() => open(STORE_URL)}
-        >
-          <Trans>Get it from the Microsoft Store</Trans>
         </CategoryButton>
       </CategoryButton.Group>
 

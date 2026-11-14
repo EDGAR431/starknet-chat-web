@@ -4304,24 +4304,18 @@ msgid "Apps"
 msgstr "Aplicaciones"
 
 #: components/app/interface/settings/user/Apps.tsx
-msgid "Not published yet. Use the Microsoft Store for now."
-msgstr "Aún no está publicado. De momento use la Microsoft Store."
+msgid "Not available yet. Coming soon."
+msgstr "Aún no está disponible. Próximamente."
 
 #: components/app/interface/settings/user/Apps.tsx
-msgid "Windows installer. It updates itself in the background, with no waiting for the Store."
-msgstr "Instalador para Windows. Se actualiza solo en segundo plano, sin esperar a la Store."
+msgid "Windows installer. It updates itself in the background."
+msgstr "Instalador para Windows. Se actualiza solo en segundo plano."
 
 #: components/app/interface/settings/user/Apps.tsx
 msgid "Download for Windows (installer)"
 msgstr "Descargar para Windows (instalador)"
 
-#: components/app/interface/settings/user/Apps.tsx
-msgid "Install from the Microsoft Store. Updates arrive through the Store."
-msgstr "Instalar desde la Microsoft Store. Las actualizaciones llegan a través de la Store."
 
-#: components/app/interface/settings/user/Apps.tsx
-msgid "Get it from the Microsoft Store"
-msgstr "Obtener en la Microsoft Store"
 
 #: components/app/interface/settings/user/Apps.tsx
 msgid "If Windows SmartScreen warns you when opening the installer, choose \"More info\" and then \"Run anyway\". The installer is not signed yet."
