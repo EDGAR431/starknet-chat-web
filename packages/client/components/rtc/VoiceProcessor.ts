@@ -26,15 +26,26 @@ export function voiceLog(
   msg: string,
   err?: unknown,
 ) {
-  const detail = err
-    ? ` | ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`
-    : "";
-  logLines.push(
-    `${new Date().toISOString().slice(11, 23)} [${level}] ${msg}${detail}`,
-  );
-  if (logLines.length > LOG_MAX) logLines.shift();
-  const fn = level === "info" ? console.info : console[level];
-  fn("[voice]", msg, err ?? "");
+  // El registro nunca debe poder romper una llamada: todo va en try/catch
+  try {
+    const detail = err
+      ? ` | ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`
+      : "";
+    logLines.push(
+      `${new Date().toISOString().slice(11, 23)} [${level}] ${msg}${detail}`,
+    );
+    if (logLines.length > LOG_MAX) logLines.shift();
+  } catch {
+    /* ignorar */
+  }
+  try {
+    // llamada como metodo (no suelta): algunas herramientas envuelven console
+    if (level === "info") console.info("[voice]", msg, err ?? "");
+    else if (level === "warn") console.warn("[voice]", msg, err ?? "");
+    else console.error("[voice]", msg, err ?? "");
+  } catch {
+    /* ignorar */
+  }
 }
 
 /** Texto completo del registro, con datos del equipo, listo para copiar */
