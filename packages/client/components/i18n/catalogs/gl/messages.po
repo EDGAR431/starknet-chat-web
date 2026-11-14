@@ -3967,3 +3967,7 @@ msgstr "Datos técnicos para descubrir por que falla o micrófono ou a supresió
 #: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
 msgid "Deafened"
 msgstr "Ensordecido"
+
+#: components/auth/src/flows/GoogleSignInButton.tsx
+msgid "Continue with Google"
+msgstr "Continuar con Google"

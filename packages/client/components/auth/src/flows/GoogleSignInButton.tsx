@@ -29,6 +29,19 @@ declare global {
   }
 }
 
+/**
+ * En la app de escritorio, Google rechaza el inicio de sesion dentro de la
+ * propia ventana ("navegador o aplicacion no seguros"), asi que se hace en el
+ * navegador del sistema a traves de la app (ver googleAuth.ts del escritorio).
+ */
+type NativeGoogle = {
+  googleSignIn?: (
+    clientId: string,
+  ) => Promise<{ idToken?: string; error?: string }>;
+};
+const nativeGoogle = () =>
+  (window as unknown as { native?: NativeGoogle }).native?.googleSignIn;
+
 const GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
 
 let gsiScriptPromise: Promise<void> | undefined;
@@ -92,6 +105,27 @@ const Divider = styled("div", {
   },
 });
 
+const NativeButton = styled("button", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    width: "320px",
+    maxWidth: "100%",
+    height: "40px",
+    borderRadius: "20px",
+    border: "1px solid #747775",
+    background: "#131314",
+    color: "#e3e3e3",
+    font: "500 14px/20px Roboto, system-ui, sans-serif",
+    cursor: "pointer",
+
+    "&:hover": { background: "#1e1f20" },
+    "&:disabled": { opacity: 0.6, cursor: "default" },
+  },
+});
+
 const ButtonSlot = styled("div", {
   base: {
     display: "flex",
@@ -151,8 +185,33 @@ export function GoogleSignInButton() {
   const [failed, setFailed] = createSignal(false);
   let buttonSlot: HTMLDivElement | undefined;
 
+  const [nativeBusy, setNativeBusy] = createSignal(false);
+  const useNative = () => !!nativeGoogle();
+
+  async function nativeSignIn() {
+    const start = nativeGoogle();
+    if (!clientId || !start || nativeBusy()) return;
+    setNativeBusy(true);
+    try {
+      const result = await start(clientId);
+      if (result.idToken) {
+        await login(
+          { id_token: result.idToken } as unknown as Parameters<typeof login>[0],
+          modals,
+        );
+        setLoggingIn(true);
+      } else {
+        console.warn("Google sign-in not completed:", result.error);
+      }
+    } catch (err) {
+      console.error("Google sign-in failed:", err);
+    } finally {
+      setNativeBusy(false);
+    }
+  }
+
   onMount(() => {
-    if (!clientId) return;
+    if (!clientId || useNative()) return;
 
     loadGoogleIdentityScript()
       .then(() => {
@@ -202,7 +261,24 @@ export function GoogleSignInButton() {
             <Trans>or</Trans>
           </Text>
         </Divider>
-        <ButtonSlot ref={buttonSlot} />
+        <Show
+          when={useNative()}
+          fallback={<ButtonSlot ref={buttonSlot} />}
+        >
+          <NativeButton
+            type="button"
+            disabled={nativeBusy()}
+            onClick={() => void nativeSignIn()}
+          >
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/>
+              <path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3.1-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/>
+              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/>
+            </svg>
+            <Trans>Continue with Google</Trans>
+          </NativeButton>
+        </Show>
       </Wrapper>
     </Show>
   );

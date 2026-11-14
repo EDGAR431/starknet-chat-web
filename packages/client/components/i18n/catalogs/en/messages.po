@@ -4332,3 +4332,7 @@ msgstr "Technical details to find out why the microphone or noise suppression fa
 #: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
 msgid "Deafened"
 msgstr "Deafened"
+
+#: components/auth/src/flows/GoogleSignInButton.tsx
+msgid "Continue with Google"
+msgstr "Continue with Google"
