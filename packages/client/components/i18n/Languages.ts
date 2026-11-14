@@ -23,6 +23,7 @@ export enum Language {
   ESTONIAN = "et",
   FINNISH = "fi",
   FILIPINO = "fil",
+  GALICIAN = "gl",
   FRENCH = "fr",
   IRISH = "ga",
   HINDI = "hi",
@@ -190,6 +191,7 @@ export const Languages: { [key in Language]: LanguageEntry } = {
   de: { display: "Deutsch", emoji: "🇩🇪", i18n: "de", verified: true },
   el: { display: "Ελληνικά", emoji: "🇬🇷", i18n: "el" },
   es: { display: "Español", emoji: "🇪🇸", i18n: "es" },
+  gl: { display: "Galego", emoji: "🐚", i18n: "gl" },
   "es-419": {
     display: "Español (América Latina)",
     emoji: "🇪🇸",
@@ -333,3 +335,16 @@ export const Languages: { [key in Language]: LanguageEntry } = {
     cat: "alt",
   },
 };
+
+/**
+ * Idiomas que se ofrecen en el selector y en la deteccion automatica.
+ * El resto de catalogos se conservan en el repositorio (para poder volver a
+ * activarlos o actualizar desde Stoat sin conflictos) pero estan ocultos.
+ * Quien ya tenia guardado un idioma oculto lo sigue usando.
+ */
+export const VISIBLE_LANGUAGES: Language[] = [
+  Language.SPANISH,
+  Language.GALICIAN,
+  Language.ENGLISH,
+  Language.ENGLISH_STUPEFIED,
+];

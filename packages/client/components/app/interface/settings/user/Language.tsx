@@ -1,6 +1,7 @@
 import { Trans, useLingui } from "@lingui/solid/macro";
 
 import { Language, Languages, browserPreferredLanguage } from "@revolt/i18n";
+import { VISIBLE_LANGUAGES } from "@revolt/i18n/Languages";
 import type { LanguageEntry } from "@revolt/i18n/Languages";
 import { timeLocale } from "@revolt/i18n/dayjs";
 import { UnicodeEmoji } from "@revolt/markdown/emoji";
@@ -50,7 +51,12 @@ function PickLanguage() {
 
   //@ts-expect-error unfilled object
   const langOpts: { [k in Language]: CategorySelectOption } = {};
-  const langIds = Object.keys(Languages) as Language[];
+  // solo los idiomas visibles (mas el actual, si el usuario tenia uno oculto)
+  const langIds = [...VISIBLE_LANGUAGES];
+  const current = i18n().locale as Language;
+  if (current in Languages && !langIds.includes(current)) {
+    langIds.push(current);
+  }
 
   //Move user's system language to top
   //TODO: Make browserPreferredLanguage() reactive, then make langOpts a memo

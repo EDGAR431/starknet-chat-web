@@ -3,7 +3,12 @@ import type { JSX } from "solid-js";
 import { i18n } from "@lingui/core";
 import { I18nProvider as LinguiProvider } from "@lingui/solid";
 
-import { type LocaleOptions, Language, Languages } from "./Languages";
+import {
+  type LocaleOptions,
+  Language,
+  Languages,
+  VISIBLE_LANGUAGES,
+} from "./Languages";
 import { messages as en } from "./catalogs/en/messages";
 import { initTime, loadTimeLocale } from "./dayjs";
 import { updateDurationLocale } from "./durations";
@@ -54,8 +59,8 @@ export async function loadAndSwitchLocale(
  * @returns Preferred language
  */
 export function browserPreferredLanguage() {
-  const languages = Object.keys(Languages).map(
-    (x) => [x, Languages[x as keyof typeof Languages]] as const,
+  const languages = VISIBLE_LANGUAGES.map(
+    (x) => [x as string, Languages[x]] as const,
   );
 
   // Get the user's system language. Check for exact
