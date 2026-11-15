@@ -4,6 +4,7 @@ import {
   JSX,
   Match,
   onCleanup,
+  onMount,
   Switch,
 } from "solid-js";
 
@@ -63,6 +64,45 @@ const Interface = (props: { children: JSX.Element }) => {
       State.Offline,
     ].includes(lifecycle.state());
   }
+
+  // Diagnostico (escritorio): si el boton de Inicio "no responde", queda
+  // anotado en drag-debug.log que hay bajo el cursor y si el clic fue
+  // cancelado por alguien, para localizar la causa.
+  onMount(() => {
+    const log = window.native?.dragLog;
+    if (!log) return;
+    const desc = (el: Element | null | undefined) =>
+      el
+        ? `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${String(
+            (el as HTMLElement).className ?? "",
+          ).slice(0, 50)}`
+        : "null";
+    const isHome = (t: EventTarget | null) =>
+      !!(t as Element | null)?.closest?.('a[href="/app"]');
+    const onDown = (e: PointerEvent) => {
+      if (!isHome(e.target)) return;
+      log(
+        `inicio: pointerdown boton=${e.button} destino=${desc(e.target as Element)} bajoCursor=${desc(document.elementFromPoint(e.clientX, e.clientY))} ruta=${location.pathname}`,
+      );
+    };
+    const onClick = (e: MouseEvent) => {
+      if (!isHome(e.target)) return;
+      log(`inicio: clic recibido ruta=${location.pathname}`);
+      setTimeout(
+        () =>
+          log(
+            `inicio: 300 ms despues ruta=${location.pathname} clicCancelado=${e.defaultPrevented}`,
+          ),
+        300,
+      );
+    };
+    window.addEventListener("pointerdown", onDown, true);
+    window.addEventListener("click", onClick, true);
+    onCleanup(() => {
+      window.removeEventListener("pointerdown", onDown, true);
+      window.removeEventListener("click", onClick, true);
+    });
+  });
 
   //Drawer slider for mobile
   let rootRef, sDrawer: SlideDrawer | undefined;

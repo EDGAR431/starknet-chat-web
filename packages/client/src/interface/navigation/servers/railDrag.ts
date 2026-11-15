@@ -285,6 +285,7 @@ export function createRailDrag(options: {
   }
 
   function swallowClick(e: MouseEvent) {
+    window.native?.dragLog?.("carril: clic tragado tras arrastrar");
     e.preventDefault();
     e.stopPropagation();
     window.removeEventListener("click", swallowClick, { capture: true });
