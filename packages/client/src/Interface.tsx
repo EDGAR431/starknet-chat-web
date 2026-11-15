@@ -96,11 +96,60 @@ const Interface = (props: { children: JSX.Element }) => {
         300,
       );
     };
+    // Errores de la pagina (los que dejan "muerta" la interfaz hasta recargar)
+    let errorCount = 0;
+    const logError = (kind: string, detail: unknown) => {
+      if (errorCount++ >= 150) return;
+      let text: string;
+      try {
+        text =
+          detail instanceof Error
+            ? `${detail.message} | ${(detail.stack ?? "").split("\n").slice(0, 4).join(" > ")}`
+            : typeof detail === "string"
+              ? detail
+              : JSON.stringify(detail);
+      } catch {
+        text = String(detail);
+      }
+      log(`ERROR ${kind} ruta=${location.pathname}: ${text.slice(0, 600)}`);
+    };
+    const onError = (e: ErrorEvent) => logError("error", e.error ?? e.message);
+    const onRejection = (e: PromiseRejectionEvent) =>
+      logError("promesa", e.reason);
+    const origConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      try {
+        logError(
+          "consola",
+          args
+            .map((a) => (a instanceof Error ? (a.stack ?? a.message) : String(a)))
+            .join(" "),
+        );
+      } catch {
+        /* ignorar */
+      }
+      origConsoleError.apply(console, args as []);
+    };
+    // la ruta tambien se anota al cambiar, para ver el orden de los hechos
+    let lastPath = location.pathname;
+    const pathTimer = setInterval(() => {
+      if (location.pathname !== lastPath) {
+        lastPath = location.pathname;
+        log(`ruta -> ${lastPath}`);
+      }
+    }, 250);
+
     window.addEventListener("pointerdown", onDown, true);
     window.addEventListener("click", onClick, true);
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
     onCleanup(() => {
       window.removeEventListener("pointerdown", onDown, true);
       window.removeEventListener("click", onClick, true);
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      console.error = origConsoleError;
+      clearInterval(pathTimer);
     });
   });
 
