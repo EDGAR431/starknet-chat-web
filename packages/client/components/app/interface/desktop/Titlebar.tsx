@@ -37,6 +37,13 @@ const isNative = !!window.native;
  */
 const nativeOverlay =
   isNative && !isMacOS && !!window.native.nativeOverlay?.();
+/**
+ * Escritorio de Windows con win-drag.exe (>= 1.7.15): el arrastre lo inicia
+ * Windows como en una barra de titulo real. La region CSS `drag` nunca se usa.
+ */
+const nativeDrag =
+  isNative && !isMacOS && !nativeOverlay && !!window.native.nativeDrag?.();
+let lastPress = { t: 0, x: 0, y: 0 };
 
 /**
  * Arrastre de respaldo. Normalmente `-webkit-app-region: drag` hace todo el
@@ -72,6 +79,22 @@ function fallbackDragHandlers(
       if (!isNative || isMacOS || nativeOverlay || e.button !== 0) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
       if (!window.native.dragStart) return;
+
+      // Con el arrastre nativo, Windows se queda con el boton y el navegador
+      // no llega a ver el doble clic: se detecta aqui, a mano.
+      if (nativeDrag) {
+        const now = Date.now();
+        const dbl =
+          now - lastPress.t < 400 &&
+          Math.abs(e.screenX - lastPress.x) < 6 &&
+          Math.abs(e.screenY - lastPress.y) < 6;
+        lastPress = { t: dbl ? 0 : now, x: e.screenX, y: e.screenY };
+        if (dbl) {
+          log("web: doble clic detectado (maximizar/restaurar)");
+          maximise();
+          return;
+        }
+      }
 
       // El arrastre solo termina cuando se SUELTA el boton: pointerup, o un
       // movimiento que ya llega sin boton pulsado (por si el pointerup se
@@ -110,7 +133,7 @@ function fallbackDragHandlers(
       window.native.dragStart();
     },
     onDblClick: (e: MouseEvent) => {
-      if (!isNative || isMacOS || nativeOverlay) return;
+      if (!isNative || isMacOS || nativeOverlay || nativeDrag) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
       log("web: doble clic (maximizar/restaurar)");
       maximise();
@@ -157,7 +180,7 @@ export function Titlebar() {
     onCleanup(() => window.removeEventListener("resize", check));
   });
   const dragRegion = () =>
-    nativeOverlay ? "drag" : isMaximised() || fills() || dragging() ? "no-drag" : "drag";
+    nativeOverlay ? "drag" : nativeDrag ? "no-drag" : isMaximised() || fills() || dragging() ? "no-drag" : "drag";
 
   const dragHandlers = fallbackDragHandlers(maximise, setDragging);
 

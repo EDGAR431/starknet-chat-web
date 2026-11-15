@@ -44,6 +44,7 @@ declare global {
       >;
       installUpdate?(): void;
       onUpdateReady?(cb: () => void): void;
+      nativeDrag?(): boolean;
       nativeOverlay?(): boolean;
       setTitleBarOverlay?(color: string, symbolColor: string): void;
       dragStart?(): void;
