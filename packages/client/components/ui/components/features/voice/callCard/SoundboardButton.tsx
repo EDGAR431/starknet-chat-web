@@ -88,6 +88,23 @@ type PanelSound = {
   isDefault: boolean;
 };
 
+/**
+ * Los sonidos por defecto se siembran en el servidor y, si el sembrado se
+ * repitió alguna vez, quedan copias con otro id: se muestra solo una por
+ * nombre (los sonidos propios no se tocan).
+ */
+function dedupeDefaults<T extends { name: string; isDefault: boolean }>(
+  list: T[],
+): T[] {
+  const seen = new Set<string>();
+  return list.filter((s) => {
+    if (!s.isDefault) return true;
+    if (seen.has(s.name)) return false;
+    seen.add(s.name);
+    return true;
+  });
+}
+
 /** Pulso corto al pulsar un sonido (respeta "reducir movimiento") */
 function pressFeedback(el: HTMLElement) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -284,9 +301,11 @@ function SoundboardPanel(props: {
     return !q || s.name.toLowerCase().includes(q);
   };
   const personalList = createMemo(() =>
-    state.soundboard.personalSounds.filter(matches),
+    dedupeDefaults(state.soundboard.personalSounds).filter(matches),
   );
-  const serverList = createMemo(() => serverSounds().filter(matches));
+  const serverList = createMemo(() =>
+    dedupeDefaults(serverSounds()).filter(matches),
+  );
   const favoriteList = createMemo<PanelSound[]>(() =>
     search().trim()
       ? []
@@ -505,7 +524,7 @@ function SoundboardPanel(props: {
             <Section>
               <SectionHeader>
                 <Trans>Mi soundboard</Trans>
-                <Count>{state.soundboard.personalSounds.length}</Count>
+                <Count>{dedupeDefaults(state.soundboard.personalSounds).length}</Count>
                 <Spacer />
                 <AddButton
                   title={t`Añadir sonido`}
@@ -554,7 +573,7 @@ function SoundboardPanel(props: {
               <Section>
                 <SectionHeader>
                   <Trans>Soundboard del servidor</Trans>
-                  <Count>{serverSounds().length}</Count>
+                  <Count>{dedupeDefaults(serverSounds()).length}</Count>
                   <Spacer />
                   <Show when={canManageServerBoard()}>
                     <AddButton
