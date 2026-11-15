@@ -27,6 +27,7 @@ export function setFlowCheckEmail(e: string) {
  */
 export default function FlowCheck() {
   const navigate = useNavigate();
+  const sentTo = () => email;
 
   return (
     <>
@@ -40,6 +41,16 @@ export default function FlowCheck() {
       >
         <Trans>Check your email</Trans>
       </FlowTitle>
+      <Show when={sentTo()}>
+        <p style={{ "text-align": "center", margin: "0 0 16px" }}>
+          <Trans>Enviado a</Trans> <strong>{sentTo()}</strong>
+          <br />
+          <Trans>
+            ¿Está mal escrito? Pulse Atrás y vuelva a registrarse con la
+            dirección correcta.
+          </Trans>
+        </p>
+      </Show>
       <Row align justify>
         <A href="..">
           <Button variant="text">

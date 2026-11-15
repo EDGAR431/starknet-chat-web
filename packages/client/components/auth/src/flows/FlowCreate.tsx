@@ -76,10 +76,17 @@ export default function FlowCreate() {
    * @param data Form Data
    */
   async function create(data: FormData) {
-    const email = data.get("email") as string;
+    const email = (data.get("email") as string).trim();
+    const confirmEmail = ((data.get("confirm-email") as string) ?? "").trim();
     const password = data.get("new-password") as string;
     const captcha = data.get("captcha") as string;
     const invite = data.get("invite") as string;
+
+    if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
+      throw new Error(
+        "Los dos correos no coinciden. Revise que la dirección esté bien escrita: ahí le llegará el enlace para activar la cuenta.",
+      );
+    }
 
     await api.post("/auth/account/create", {
       email,
@@ -115,6 +122,7 @@ export default function FlowCreate() {
           fields={[
             // Stoat's privacy policy doesn't cover third party instances
             isStoat ? { field: "email", hint: <EmailPrivacyHint /> } : "email",
+            "confirm-email",
             "new-password",
           ]}
         />

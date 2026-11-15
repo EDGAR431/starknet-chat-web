@@ -29,6 +29,7 @@ const ErrorContainer = styled("span", {
  */
 type Field =
   | "email"
+  | "confirm-email"
   | "password"
   | "new-password"
   | "log-out"
@@ -47,6 +48,12 @@ const useFieldConfiguration = () => {
       name: () => t`Email`,
       placeholder: () => t`Please enter your email.`,
       autocomplete: "email",
+    },
+    "confirm-email": {
+      type: "email" as const,
+      name: () => t`Confirmar correo`,
+      placeholder: () => t`Escríbalo de nuevo, igual que arriba.`,
+      autocomplete: "off",
     },
     password: {
       minLength: 8,
