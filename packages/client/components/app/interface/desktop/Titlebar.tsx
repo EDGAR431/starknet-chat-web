@@ -49,42 +49,63 @@ function fillsScreen(): boolean {
   }
 }
 
+function isMaximisedNow(): boolean {
+  return fillsScreen();
+}
+
 function fallbackDragHandlers(
   maximise: () => void,
   setDragging: (v: boolean) => void,
 ) {
+  /** Envia una linea al registro del escritorio (drag-debug.log) */
+  const log = (msg: string) => window.native?.dragLog?.(msg);
+
   return {
     onPointerDown: (e: PointerEvent & { currentTarget: HTMLElement }) => {
       if (!isNative || isMacOS || e.button !== 0) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
       if (!window.native.dragStart) return;
-      const el = e.currentTarget;
-      try {
-        el.setPointerCapture(e.pointerId);
-      } catch {
-        /* ignorar */
-      }
-      const end = () => {
+
+      // El arrastre solo termina cuando se SUELTA el boton: pointerup, o un
+      // movimiento que ya llega sin boton pulsado (por si el pointerup se
+      // pierde al restaurar la ventana). Antes tambien terminaba con
+      // pointercancel / lostpointercapture, que Windows dispara al restaurar la
+      // ventana maximizada: el arrastre se cortaba justo al empezar.
+      let finished = false;
+      const end = (reason: string) => {
+        if (finished) return;
+        finished = true;
         setDragging(false);
+        log(`web: fin (${reason})`);
         window.native.dragEnd?.();
-        el.removeEventListener("pointerup", end);
-        el.removeEventListener("pointercancel", end);
-        el.removeEventListener("lostpointercapture", end);
-        window.removeEventListener("pointerup", end, true);
-        window.removeEventListener("pointercancel", end, true);
+        window.removeEventListener("pointerup", onUp, true);
+        window.removeEventListener("pointermove", onMove, true);
+        window.removeEventListener("pointercancel", onCancel, true);
+        window.removeEventListener("blur", onBlur);
       };
-      el.addEventListener("pointerup", end);
-      el.addEventListener("pointercancel", end);
-      el.addEventListener("lostpointercapture", end);
-      // respaldo: al restaurar la ventana la captura del puntero puede perderse
-      window.addEventListener("pointerup", end, true);
-      window.addEventListener("pointercancel", end, true);
+      const onUp = (ev: PointerEvent) => end(`pointerup boton=${ev.button}`);
+      const onMove = (ev: PointerEvent) => {
+        if (ev.buttons === 0) end("movimiento sin boton");
+      };
+      // solo informativos: no cortan el arrastre
+      const onCancel = () => log("web: pointercancel (ignorado)");
+      const onBlur = () => log("web: blur de la ventana (ignorado)");
+
+      window.addEventListener("pointerup", onUp, true);
+      window.addEventListener("pointermove", onMove, true);
+      window.addEventListener("pointercancel", onCancel, true);
+      window.addEventListener("blur", onBlur);
+
+      log(
+        `web: pointerdown x=${e.screenX} y=${e.screenY} maximizada=${isMaximisedNow()} outer=${window.outerWidth}x${window.outerHeight} avail=${window.screen.availWidth}x${window.screen.availHeight}`,
+      );
       setDragging(true);
       window.native.dragStart();
     },
     onDblClick: (e: MouseEvent) => {
       if (!isNative || isMacOS) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
+      log("web: doble clic (maximizar/restaurar)");
       maximise();
     },
   };

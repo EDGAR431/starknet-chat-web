@@ -46,6 +46,7 @@ declare global {
       onUpdateReady?(cb: () => void): void;
       dragStart?(): void;
       dragEnd?(): void;
+      dragLog?(message: string): void;
       onceScreenPicker(
         onScreenPick: (
           sources: {
