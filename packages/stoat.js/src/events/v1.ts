@@ -212,6 +212,8 @@ type ServerMessage =
       type: "UserMoveVoiceChannel";
       node: string;
       token: string;
+      from?: string;
+      to?: string;
     }
   | {
       type: "UserSlowmodes";
@@ -1063,7 +1065,9 @@ export async function handleEvent(
       break;
     }
     case "UserMoveVoiceChannel": {
-      // todo
+      // Un moderador nos ha movido a otro canal de voz: el cliente de RTC se
+      // vuelve a conectar al canal de destino.
+      if (event.to) client.emit("voiceMoved", event.to);
       break;
     }
     case "UserSlowmodes": {

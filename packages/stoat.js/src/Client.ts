@@ -111,6 +111,9 @@ export type Events = {
   soundboardSoundDelete: [sound: HydratedSoundboardSound];
 
   userSlowmodes: [];
+
+  /** Un moderador nos ha movido a otro canal de voz (id del canal destino) */
+  voiceMoved: [channelId: string];
 };
 
 /**

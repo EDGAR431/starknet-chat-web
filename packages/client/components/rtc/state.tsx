@@ -4,6 +4,7 @@ import {
   createContext,
   createEffect,
   createSignal,
+  onCleanup,
   JSX,
   Setter,
   useContext,
@@ -245,6 +246,21 @@ class Voice {
 
     this.screenShareTracks = new Set();
 
+    // Si un moderador nos mueve a otro canal de voz, nos reconectamos al destino
+    createEffect(() => {
+      const client = this.getClient();
+      const onMoved = (channelId: string) => {
+        const target = client.channels.get(channelId);
+        if (!target) return;
+        this.sound.playSound("userJoinVoice");
+        void this.connect(target).catch((e) =>
+          console.error("No se pudo seguir al canal de voz al que se nos movió:", e),
+        );
+      };
+      client.on("voiceMoved", onMoved);
+      onCleanup(() => client.off("voiceMoved", onMoved));
+    });
+
     // Setup settings listeners
     this.settingsListeners();
   }
@@ -429,7 +445,14 @@ class Voice {
       }
     })();
 
-    room.addListener("disconnected", () => this.#setState("DISCONNECTED"));
+    // Si el servidor nos saca de la llamada (expulsión de un moderador) o se
+    // pierde la conexión por completo, se limpia todo igual que al colgar: así
+    // no queda una llamada «muerta» en pantalla.
+    room.addListener("disconnected", () => {
+      if (this.room() !== room) return;
+      this.sound.playSound("userLeaveVoice");
+      this.disconnect();
+    });
 
     // Streams bajo demanda: cuando alguien empieza a compartir pantalla, no se
     // descarga hasta que el usuario pulse «Ver stream».
