@@ -18,7 +18,10 @@ import {
   ConnectionQuality,
   ExternalE2EEKeyProvider,
   LocalTrackPublication,
+  RemoteParticipant,
+  RemoteTrackPublication,
   Room,
+  RoomEvent,
   ScreenShareCaptureOptions,
   ScreenSharePresets,
   Track,
@@ -118,6 +121,37 @@ class Voice {
   private config;
   private limits;
   private screenShareTracks: Set<string>;
+
+  /**
+   * Identidades de quienes emiten pantalla y cuyo stream el usuario ha
+   * decidido VER. Sin pulsar «Ver stream» no se descarga el vídeo ni su audio
+   * (ahorra datos, batería y carga del servidor).
+   */
+  #watching = createSignal<Set<string>>(new Set());
+
+  isWatching(identity: string): boolean {
+    return this.#watching[0]().has(identity);
+  }
+
+  setWatching(identity: string, on: boolean) {
+    const next = new Set(this.#watching[0]());
+    if (on) next.add(identity);
+    else next.delete(identity);
+    this.#watching[1](next);
+    const p = this.room()?.getParticipantByIdentity(identity);
+    if (p && p instanceof RemoteParticipant) this.#applyStreamSubscription(p);
+  }
+
+  /** Suscribe o anula el vídeo/audio de pantalla compartida según se mire o no */
+  #applyStreamSubscription(p: RemoteParticipant) {
+    const watch = this.#watching[0]().has(p.identity);
+    for (const source of [Track.Source.ScreenShare, Track.Source.ScreenShareAudio]) {
+      const pub = p.getTrackPublication(source);
+      if (pub instanceof RemoteTrackPublication && pub.isSubscribed !== watch) {
+        pub.setSubscribed(watch);
+      }
+    }
+  }
   private voiceProcessor?: VoiceProcessor;
 
   // Caché de sonidos del soundboard ya decodificados (por fileId), para que
@@ -272,6 +306,9 @@ class Voice {
     this.device.setWakeLocked();
 
     const room = new Room({
+      // El servidor y el emisor envían solo la calidad que se ve de verdad
+      adaptiveStream: true,
+      dynacast: true,
       audioCaptureDefaults: {
         deviceId: this.#settings.preferredAudioInputDevice,
         echoCancellation: this.#settings.echoCancellation,
@@ -296,6 +333,9 @@ class Voice {
       publishDefaults: {
         videoEncoding: VideoPresets.h720.encoding,
         screenShareEncoding: ScreenSharePresets.h720fps30.encoding,
+        // ante falta de ancho de banda: bajar nitidez antes que fotogramas
+        degradationPreference: "maintain-framerate",
+        simulcast: true,
       },
     });
 
@@ -330,6 +370,7 @@ class Voice {
         if (screenShareTrack) {
           this.screenShareTracks.add(screenShareTrack.trackSid);
         }
+        this.#applyStreamSubscription(p);
       }
       this.sound.playSound("userJoinVoice");
       this.#startPingPolling(room);
@@ -389,6 +430,24 @@ class Voice {
     })();
 
     room.addListener("disconnected", () => this.#setState("DISCONNECTED"));
+
+    // Streams bajo demanda: cuando alguien empieza a compartir pantalla, no se
+    // descarga hasta que el usuario pulse «Ver stream».
+    room.on(RoomEvent.TrackPublished, (publication, participant) => {
+      if (
+        publication.source === Track.Source.ScreenShare ||
+        publication.source === Track.Source.ScreenShareAudio
+      ) {
+        this.#applyStreamSubscription(participant);
+      }
+    });
+    room.on(RoomEvent.TrackUnpublished, (publication, participant) => {
+      // si deja de compartir, la próxima vez hay que volver a pulsar «Ver»
+      if (publication.source === Track.Source.ScreenShare) {
+        const next = new Set(this.#watching[0]());
+        if (next.delete(participant.identity)) this.#watching[1](next);
+      }
+    });
 
     room.addListener("connectionQualityChanged", (quality, participant) => {
       // Solo nos interesa reflejar nuestra propia calidad de conexión
@@ -650,6 +709,7 @@ class Voice {
       });
 
       this.screenShareTracks = new Set();
+      this.#watching[1](new Set<string>());
 
       this.sound.playSound("userLeaveVoice");
     } catch (e) {
@@ -981,7 +1041,22 @@ class Voice {
               restrictOwnAudio: true,
             },
           },
-          { screenShareEncoding: chosenQuality?.encoding },
+          {
+            screenShareEncoding: chosenQuality?.encoding,
+            // capas extra para que cada espectador reciba la que su conexión
+            // aguanta y uno con mala red no afecte a los demás
+            simulcast: chosenQuality?.name !== "text",
+            screenShareSimulcastLayers:
+              chosenQuality?.name === "high"
+                ? [ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps15]
+                : chosenQuality?.name === "text"
+                  ? []
+                  : [ScreenSharePresets.h360fps15],
+            degradationPreference:
+              chosenQuality?.name === "text"
+                ? "maintain-resolution"
+                : "maintain-framerate",
+          },
         );
 
         const screenAudioTrack = room.localParticipant.getTrackPublication(

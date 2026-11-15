@@ -37,7 +37,12 @@ export function RoomAudioManager() {
     const tracks = filteredTracks();
     console.info("[rtc] filtered tracks", filteredTracks());
     for (const track of tracks) {
-      (track.publication as RemoteTrackPublication).setSubscribed(true);
+      // el audio de una pantalla compartida solo se descarga si se está viendo
+      const wanted =
+        track.source === Track.Source.ScreenShareAudio
+          ? voice.isWatching(track.participant.identity)
+          : true;
+      (track.publication as RemoteTrackPublication).setSubscribed(wanted);
       console.info(track.publication);
     }
   });

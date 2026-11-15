@@ -33,6 +33,14 @@ export function VoiceCallCardPiP() {
     const track = voice.focusTrack();
     if (!track) return false;
 
+    // una pantalla ajena solo se muestra si se ha pulsado «Ver stream»
+    if (
+      track.source === Track.Source.ScreenShare &&
+      !track.participant.isLocal &&
+      !voice.isWatching(track.participant.identity)
+    )
+      return false;
+
     return (
       track.source === Track.Source.ScreenShare ||
       !useIsMuted({

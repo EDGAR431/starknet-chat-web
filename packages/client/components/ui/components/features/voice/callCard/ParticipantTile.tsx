@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { JSX, createSignal, onCleanup, onMount, Show } from "solid-js";
 import {
   TrackReference,
   useEnsureParticipant,
@@ -72,6 +72,10 @@ export function ParticipantTile(props: TileProps) {
 
   const isVideo = () => !isVideoMuted();
   const isScreenShare = () => track.source === Track.Source.ScreenShare;
+  /** Pantalla de otra persona: solo se descarga al pulsar «Ver stream» */
+  const isRemoteStream = () => isScreenShare() && !participant.isLocal;
+  const watching = () =>
+    !isRemoteStream() || voice.isWatching(participant.identity);
   const isSpeaking = useIsSpeaking(participant);
 
   const getHeight = () => {
@@ -114,36 +118,62 @@ export function ParticipantTile(props: TileProps) {
         style={{ ...getHeight() }}
       >
         <Show
-          when={isVideo() || isScreenShare()}
+          when={(isVideo() || isScreenShare()) && watching()}
           fallback={
-            <AvatarOnly>
-              <Avatar
-                src={user().avatar}
-                fallback={user().username}
-                size={48}
-                interactive={false}
-              />
-            </AvatarOnly>
+            <Show
+              when={isRemoteStream() && !watching()}
+              fallback={
+                <AvatarOnly>
+                  <Avatar
+                    src={user().avatar}
+                    fallback={user().username}
+                    size={48}
+                    interactive={false}
+                  />
+                </AvatarOnly>
+              }
+            >
+              <StreamGate>
+                <Avatar
+                  src={user().avatar}
+                  fallback={user().username}
+                  size={48}
+                  interactive={false}
+                />
+                <GateButton
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    voice.setWatching(participant.identity, true);
+                  }}
+                >
+                  <Symbol size={18}>visibility</Symbol>
+                  Ver stream
+                </GateButton>
+              </StreamGate>
+            </Show>
           }
         >
-          <VideoTrack
-            style={{
-              "grid-area": "1/1",
-              "object-fit": "contain",
-              width: "100%",
-              height: "100%",
-              overflow: "hidden",
-            }}
-            trackRef={track as TrackReference}
-            manageSubscription={true}
-            ref={videoRef}
-            on:resize={() => {
-              setVideoDims({
-                height: videoRef?.videoHeight || 0,
-                width: videoRef?.videoWidth || 0,
-              });
-            }}
-          />
+          <ZoomLayer enabled={isScreenShare()}>
+            <VideoTrack
+              style={{
+                "grid-area": "1/1",
+                "object-fit": "contain",
+                width: "100%",
+                height: "100%",
+                overflow: "hidden",
+              }}
+              trackRef={track as TrackReference}
+              manageSubscription={true}
+              ref={videoRef}
+              on:resize={() => {
+                setVideoDims({
+                  height: videoRef?.videoHeight || 0,
+                  width: videoRef?.videoWidth || 0,
+                });
+              }}
+            />
+          </ZoomLayer>
         </Show>
         <Overlay showOnHover={isScreenShare()}>
           <OverlayInner>
@@ -152,6 +182,19 @@ export function ParticipantTile(props: TileProps) {
               {(ms) => <PingLabel>{ms()} ms</PingLabel>}
             </Show>
             <Row gap="md">
+              <Show when={isRemoteStream() && watching()}>
+                <StopWatching
+                  type="button"
+                  title="Dejar de ver"
+                  aria-label="Dejar de ver el stream"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    voice.setWatching(participant.identity, false);
+                  }}
+                >
+                  <Symbol size={18}>visibility_off</Symbol>
+                </StopWatching>
+              </Show>
               {isScreenShare() ? (
                 <Show when={isScreenShareAudioUserMuted()}>
                   <Symbol
@@ -318,5 +361,167 @@ const PingLabel = styled("span", {
     marginLeft: "var(--gap-sm)",
     fontSize: "11px",
     opacity: 0.7,
+  },
+});
+
+/**
+ * Zoom del stream (como en la aplicación móvil): rueda del ratón para acercar
+ * (1x a 6x, centrado en el cursor), arrastrar para mover y doble clic para
+ * alternar entre 1x y 2,5x.
+ */
+function ZoomLayer(props: { enabled: boolean; children: JSX.Element }) {
+  const [zoom, setZoom] = createSignal(1);
+  const [pan, setPan] = createSignal({ x: 0, y: 0 });
+  let box!: HTMLDivElement;
+  let moved = 0;
+  let suppressClick = false;
+  let drag: { x: number; y: number; id: number } | undefined;
+
+  const clampPan = (x: number, y: number, z: number) => ({
+    x: Math.min(0, Math.max(x, -box.clientWidth * (z - 1))),
+    y: Math.min(0, Math.max(y, -box.clientHeight * (z - 1))),
+  });
+
+  const zoomAt = (cx: number, cy: number, target: number) => {
+    const z = zoom();
+    const nz = Math.min(6, Math.max(1, target));
+    if (nz === z) return;
+    const p = pan();
+    const ratio = nz / z;
+    setZoom(nz);
+    setPan(
+      nz <= 1
+        ? { x: 0, y: 0 }
+        : clampPan(cx - (cx - p.x) * ratio, cy - (cy - p.y) * ratio, nz),
+    );
+  };
+
+  const onWheel = (e: WheelEvent) => {
+    if (!props.enabled) return;
+    e.preventDefault();
+    const r = box.getBoundingClientRect();
+    zoomAt(
+      e.clientX - r.left,
+      e.clientY - r.top,
+      zoom() * (e.deltaY < 0 ? 1.15 : 1 / 1.15),
+    );
+  };
+
+  const onClickCapture = (e: MouseEvent) => {
+    if (suppressClick) {
+      suppressClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
+
+  onMount(() => {
+    box.addEventListener("wheel", onWheel, { passive: false });
+    box.addEventListener("click", onClickCapture, true);
+  });
+  onCleanup(() => {
+    box.removeEventListener("wheel", onWheel);
+    box.removeEventListener("click", onClickCapture, true);
+  });
+
+  return (
+    <div
+      ref={box}
+      style={{
+        "grid-area": "1/1",
+        overflow: "hidden",
+        width: "100%",
+        height: "100%",
+        cursor: props.enabled && zoom() > 1 ? "grab" : undefined,
+        "touch-action": props.enabled ? "none" : undefined,
+      }}
+      onPointerDown={(e) => {
+        if (!props.enabled || zoom() <= 1 || e.button !== 0) return;
+        drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+        moved = 0;
+        box.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (!drag || drag.id !== e.pointerId) return;
+        const dx = e.clientX - drag.x;
+        const dy = e.clientY - drag.y;
+        drag = { ...drag, x: e.clientX, y: e.clientY };
+        moved += Math.abs(dx) + Math.abs(dy);
+        const p = pan();
+        setPan(clampPan(p.x + dx, p.y + dy, zoom()));
+      }}
+      onPointerUp={(e) => {
+        if (!drag || drag.id !== e.pointerId) return;
+        drag = undefined;
+        suppressClick = moved > 4;
+        // si no hubo clic posterior, no se deja la marca puesta
+        setTimeout(() => (suppressClick = false), 0);
+      }}
+      onDblClick={(e) => {
+        if (!props.enabled) return;
+        const r = box.getBoundingClientRect();
+        zoomAt(e.clientX - r.left, e.clientY - r.top, zoom() > 1 ? 1 : 2.5);
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "grid",
+          "transform-origin": "0 0",
+          transform: `translate(${pan().x}px, ${pan().y}px) scale(${zoom()})`,
+        }}
+      >
+        {props.children}
+      </div>
+    </div>
+  );
+}
+
+const StreamGate = styled("div", {
+  base: {
+    gridArea: "1/1",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "var(--gap-md)",
+    padding: "var(--gap-lg)",
+  },
+});
+
+const GateButton = styled("button", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "var(--gap-sm)",
+    padding: "var(--gap-md) var(--gap-xl)",
+    border: "none",
+    borderRadius: "var(--borderRadius-circle)",
+    cursor: "pointer",
+    font: "inherit",
+    fontWeight: 600,
+    color: "var(--md-sys-color-on-primary)",
+    background: "var(--md-sys-color-primary)",
+    _hover: { filter: "brightness(1.1)" },
+    _focusVisible: {
+      outline: "2px solid var(--md-sys-color-primary)",
+      outlineOffset: "2px",
+    },
+  },
+});
+
+const StopWatching = styled("button", {
+  base: {
+    display: "grid",
+    placeItems: "center",
+    width: "28px",
+    height: "28px",
+    border: "none",
+    borderRadius: "var(--borderRadius-circle)",
+    cursor: "pointer",
+    color: "inherit",
+    background: "#0006",
+    _hover: { background: "#0009" },
   },
 });
