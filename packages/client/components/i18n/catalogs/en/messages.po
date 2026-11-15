@@ -38,6 +38,10 @@ msgstr "[Last] dddd [at] LT"
 msgid "dddd [at] LT"
 msgstr "dddd [at] LT"
 
+#: components/auth/src/flows/FlowCheck.tsx
+msgid "¿Está mal escrito? Pulse Atrás y vuelva a registrarse con la dirección correcta."
+msgstr "Is it misspelled? Press Back and sign up again with the correct address."
+
 #: components/app/interface/settings/server/roles/ServerRoleOverview.tsx
 msgid "(changes are being saved…)"
 msgstr "(changes are being saved…)"
@@ -419,6 +423,10 @@ msgstr "Add status text"
 msgid "Add to folder"
 msgstr "Add to folder"
 
+#: src/gamepad/GamepadController.tsx
+msgid "Adjust"
+msgstr "Adjust"
+
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Admin"
 msgstr "Admin"
@@ -502,10 +510,34 @@ msgstr "An error occurred."
 msgid "An internal error occurred. ({0})"
 msgstr "An internal error occurred. ({0})"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Añadir"
+msgstr "Add"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Añadir a favoritos"
+msgstr "Add to favorites"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Añadir sonido"
+msgstr "Add sound"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Añadir sonido al servidor"
+msgstr "Add sound to server"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Another application is already using this combination."
+msgstr "Another application is already using this combination."
+
 #: components/app/interface/settings/user/Sync.tsx
 #: components/app/interface/settings/UserSettings.tsx
 msgid "Appearance"
 msgstr "Appearance"
+
+#: components/app/interface/settings/UserSettings.tsx
+msgid "Apps"
+msgstr "Apps"
 
 #: components/modal/modals/SignOutSessions.tsx
 msgid "Are you sure you want to clear your sessions?"
@@ -549,6 +581,10 @@ msgstr "Assign Roles"
 msgid "Audio disabled by browser"
 msgstr "Audio disabled by browser"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Aún no tienes sonidos. Pulsa Añadir para subir uno (máx. 512 KB)."
+msgstr "You have no sounds yet. Press Add to upload one (max. 512 KB)."
+
 #: components/app/interface/settings/user/Account.tsx
 #: components/modal/modals/MFAFlow.tsx
 msgid "Authenticator App"
@@ -566,6 +602,7 @@ msgstr "Avatar"
 #: components/auth/src/flows/FlowCheck.tsx
 #: components/auth/src/flows/FlowCreate.tsx
 #: components/modal/modals/MFAFlow.tsx
+#: src/gamepad/GamepadController.tsx
 #: src/interface/channels/AgeGate.tsx
 msgid "Back"
 msgstr "Back"
@@ -628,6 +665,10 @@ msgstr "Blocked"
 msgid "Blocked User"
 msgstr "Blocked User"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Borrar búsqueda"
+msgstr "Clear search"
+
 #: components/app/interface/channels/text/Message.tsx
 msgid "Bot"
 msgstr "Bot"
@@ -645,8 +686,12 @@ msgstr "Browser Echo Cancellation"
 #~ msgstr "Browser Noise Supression"
 
 #: components/app/interface/settings/user/Feedback.tsx
-msgid "Bug Tracker"
-msgstr "Bug Tracker"
+#~ msgid "Bug Tracker"
+#~ msgstr "Bug Tracker"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Buscar sonido"
+msgstr "Search sound"
 
 #: components/ui/components/features/profiles/ProfileStatus.tsx
 #: src/interface/channels/text/MemberSidebar.tsx
@@ -655,12 +700,20 @@ msgid "Busy"
 msgstr "Busy"
 
 #: components/modal/modals/CreateBot.tsx
-msgid "By creating this bot, you agree to the <0>Acceptable Use Policy</0>."
-msgstr "By creating this bot, you agree to the <0>Acceptable Use Policy</0>."
+#~ msgid "By creating this bot, you agree to the <0>Acceptable Use Policy</0>."
+#~ msgstr "By creating this bot, you agree to the <0>Acceptable Use Policy</0>."
+
+#: components/modal/modals/CreateBot.tsx
+msgid "By creating this bot, you agree to the Acceptable Use Policy."
+msgstr "By creating this bot, you agree to the Acceptable Use Policy."
 
 #: components/modal/modals/CreateServer.tsx
-msgid "By creating this server, you agree to the <0>Acceptable Use Policy</0>."
-msgstr "By creating this server, you agree to the <0>Acceptable Use Policy</0>."
+#~ msgid "By creating this server, you agree to the <0>Acceptable Use Policy</0>."
+#~ msgstr "By creating this server, you agree to the <0>Acceptable Use Policy</0>."
+
+#: components/modal/modals/CreateServer.tsx
+msgid "By creating this server, you agree to the Acceptable Use Policy."
+msgstr "By creating this server, you agree to the Acceptable Use Policy."
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Bypass Slowmode"
@@ -728,6 +781,10 @@ msgstr "Cancel message"
 msgid "Cancel your discover request and remove it from the review queue"
 msgstr "Cancel your discover request and remove it from the review queue"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Cancelar"
+msgstr "Cancel"
+
 #: components/app/interface/settings/user/Account.tsx
 msgid "Cannot delete account until servers are deleted or transferred"
 msgstr "Cannot delete account until servers are deleted or transferred"
@@ -735,6 +792,10 @@ msgstr "Cannot delete account until servers are deleted or transferred"
 #: components/i18n/errors.tsx
 msgid "Cannot edit this message."
 msgstr "Cannot edit this message."
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Cargando…"
+msgstr "Loading…"
 
 #: components/modal/modals/EditBotUsername.tsx
 #: components/modal/modals/EditEmoji.tsx
@@ -843,6 +904,10 @@ msgstr "Chat Input"
 msgid "Check back often to see if your {0} has been approved!"
 msgstr "Check back often to see if your {0} has been approved!"
 
+#: components/app/interface/settings/user/Native.tsx
+msgid "Check for updates"
+msgstr "Check for updates"
+
 #: components/auth/src/flows/FlowCheck.tsx
 msgid "Check your email"
 msgstr "Check your email"
@@ -850,6 +915,10 @@ msgstr "Check your email"
 #: components/auth/src/flows/FlowCheck.tsx
 #~ msgid "Check your mail!"
 #~ msgstr "Check your mail!"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Checking…"
+msgstr "Checking…"
 
 #: components/auth/src/flows/FlowConfirmReset.tsx
 msgid "Choose a new password for your StarknetChat account."
@@ -913,6 +982,8 @@ msgstr "Client Settings"
 #: components/modal/modals/UserProfileMutualFriends.tsx
 #: components/modal/modals/UserProfileMutualGroups.tsx
 #: components/modal/modals/UserProfileRoles.tsx
+#: src/gamepad/GamepadController.tsx
+#: src/gamepad/OnScreenKeyboard.tsx
 msgid "Close"
 msgstr "Close"
 
@@ -947,12 +1018,21 @@ msgstr "Configure one-time password authentication"
 
 #: components/auth/src/flows/FlowLogin.tsx
 #: components/modal/modals/MFAFlow.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Confirm"
 msgstr "Confirm"
 
 #: components/modal/modals/MFAFlow.tsx
 msgid "Confirm action"
 msgstr "Confirm action"
+
+#: components/modal/modals/MFAFlow.tsx
+msgid "Confirm with the same Google account you signed in with."
+msgstr "Confirm with the same Google account you signed in with."
+
+#: components/auth/src/flows/Form.tsx
+msgid "Confirmar correo"
+msgstr "Confirm email"
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Connect"
@@ -969,6 +1049,10 @@ msgstr "Connected"
 #: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
 msgid "Connecting"
 msgstr "Connecting"
+
+#: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
+msgid "Console mode (larger interface and button hints, for TV)"
+msgstr "Console mode (larger interface and button hints, for TV)"
 
 #. placeholder {0}: props.discoverable instanceof Bot ? "bot" : "server"
 #: components/app/interface/settings/shared/Discoverable.tsx
@@ -992,9 +1076,17 @@ msgstr "Continue in browser"
 msgid "Continue to app"
 msgstr "Continue to app"
 
+#: components/auth/src/flows/GoogleSignInButton.tsx
+msgid "Continue with Google"
+msgstr "Continue with Google"
+
 #: components/app/interface/settings/user/Language.tsx
-msgid "Contribute a language"
-msgstr "Contribute a language"
+#~ msgid "Contribute a language"
+#~ msgstr "Contribute a language"
+
+#: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
+msgid "Controller"
+msgstr "Controller"
 
 #: src/interface/navigation/channels/HomeSidebar.tsx
 msgid "Conversations"
@@ -1003,6 +1095,14 @@ msgstr "Conversations"
 #: components/ui/components/features/profiles/ProfileBanner.tsx
 msgid "Copied!"
 msgstr "Copied!"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copied. Paste it in a message to the person helping you."
+msgstr "Copied. Paste it in a message to the person helping you."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Copy audio log"
+msgstr "Copy audio log"
 
 #: components/app/menus/CategoryContextMenu.tsx
 msgid "Copy category ID"
@@ -1074,6 +1174,10 @@ msgstr "Copy webhook URL"
 #: components/i18n/errors.tsx
 msgid "Could not find what you requested."
 msgstr "Could not find what you requested."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Couldn't check for updates. Try again later."
+msgstr "Couldn't check for updates. Try again later."
 
 #: components/instance/index.tsx
 msgid "Couldn't fetch StarknetChat configuration from {hStr}."
@@ -1246,6 +1350,10 @@ msgstr "Current Password"
 msgid "Current Session"
 msgstr "Current Session"
 
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Cursor"
+msgstr "Cursor"
+
 #: components/ui/components/design/ColourPicker.tsx
 msgid "Custom colour"
 msgstr "Custom colour"
@@ -1278,6 +1386,7 @@ msgstr "Date format"
 
 #: components/app/interface/settings/user/notifications/Sounds.tsx
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Deafen"
 msgstr "Deafen"
 
@@ -1288,6 +1397,14 @@ msgstr "Deafen lower-ranking members in voice call"
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Deafen Members"
 msgstr "Deafen Members"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Deafen shortcut"
+msgstr "Deafen shortcut"
+
+#: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
+msgid "Deafened"
+msgstr "Deafened"
 
 #: components/app/menus/shared/NotificationContextMenu.tsx
 #: components/ui/components/design/ColourPicker.tsx
@@ -1316,6 +1433,7 @@ msgstr "Degraded Performance"
 #: components/modal/modals/DeleteMessage.tsx
 #: components/modal/modals/DeleteRole.tsx
 #: components/modal/modals/DeleteServer.tsx
+#: src/gamepad/OnScreenKeyboard.tsx
 msgid "Delete"
 msgstr "Delete"
 
@@ -1393,6 +1511,10 @@ msgstr "Delete Server"
 msgid "Deleting this emoji will disallow future use. All past uses will remain."
 msgstr "Deleting this emoji will disallow future use. All past uses will remain."
 
+#: components/app/menus/UserContextMenu.tsx
+msgid "Desconectar de la llamada"
+msgstr "Disconnect from call"
+
 #. placeholder {0}: props.invite.username
 #: components/modal/modals/AddBot.tsx
 msgid "Description provided by {0}"
@@ -1403,8 +1525,8 @@ msgid "Desktop"
 msgstr "Desktop"
 
 #: components/app/interface/settings/user/bots/MyBots.tsx
-msgid "Developer Documentation"
-msgstr "Developer Documentation"
+#~ msgid "Developer Documentation"
+#~ msgstr "Developer Documentation"
 
 #: components/app/interface/settings/user/Account.tsx
 msgid "Disable Account"
@@ -1477,24 +1599,33 @@ msgid "Don't show this again"
 msgstr "Don't show this again"
 
 #: components/app/interface/settings/UserSettings.tsx
-msgid "Donate"
-msgstr "Donate"
+#~ msgid "Donate"
+#~ msgstr "Donate"
 
 #: src/interface/Home.tsx
-msgid "Donate to Stoat"
-msgstr "Donate to Stoat"
+#~ msgid "Donate to Stoat"
+#~ msgstr "Donate to Stoat"
 
 #: components/ui/components/features/profiles/ProfileBadges.tsx
 msgid "Donated to Stoat"
 msgstr "Donated to Stoat"
 
 #: components/modal/modals/MFARecovery.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Done"
 msgstr "Done"
 
 #: components/auth/src/AppUpsell.tsx
 msgid "Download for desktop"
 msgstr "Download for desktop"
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Download for Windows (installer)"
+msgstr "Download for Windows (installer)"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Downloading the update… It will be installed when you restart."
+msgstr "Downloading the update… It will be installed when you restart."
 
 #: components/modal/modals/ReportContent.tsx
 msgid "Drugs or illegal goods"
@@ -1571,6 +1702,14 @@ msgstr "Edited"
 msgid "Effective <0/> (<1/>)"
 msgstr "Effective <0/> (<1/>)"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "El archivo es demasiado grande (máx. 512 KB)"
+msgstr "The file is too large (max. 512 KB)"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Eliminar"
+msgstr "Delete"
+
 #: components/app/interface/settings/user/Account.tsx
 #: components/auth/src/flows/Form.tsx
 #: components/modal/modals/EditEmail.tsx
@@ -1580,6 +1719,10 @@ msgstr "Email"
 #: components/app/interface/settings/server/emojis/EmojiList.tsx
 msgid "Emoji"
 msgstr "Emoji"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Emoji (opcional)"
+msgstr "Emoji (optional)"
 
 #: components/app/interface/settings/server/emojis/EmojiList.tsx
 #: components/modal/modals/EditEmoji.tsx
@@ -1617,6 +1760,10 @@ msgstr "Enable transparency glass/blur effects (slow on older machines)"
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
 msgid "End call"
 msgstr "End call"
+
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "End-to-end encrypted"
+msgstr "End-to-end encrypted"
 
 #: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
 msgid "Enhanced"
@@ -1665,12 +1812,28 @@ msgstr "Enter your invite code."
 msgid "Enter your preferred username."
 msgstr "Enter your preferred username."
 
+#: components/auth/src/flows/FlowCheck.tsx
+msgid "Enviado a"
+msgstr "Sent to"
+
+#: components/auth/src/flows/Form.tsx
+msgid "Escríbalo de nuevo, igual que arriba."
+msgstr "Type it again, the same as above."
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Este servidor aún no tiene sonidos."
+msgstr "This server has no sounds yet."
+
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsOverview.tsx
 #: components/app/interface/settings/ChannelSettings.tsx
 #: components/app/interface/settings/server/roles/ServerRoleOverview.tsx
 #: components/app/interface/settings/ServerSettings.tsx
 msgid "Everyone"
 msgstr "Everyone"
+
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "Excellent connection"
+msgstr "Excellent connection"
 
 #: components/modal/modals/LinkWarning.tsx
 msgid "External links can be dangerous!"
@@ -1704,10 +1867,14 @@ msgstr "Failed to send"
 msgid "Failed to verify!"
 msgstr "Failed to verify!"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Favoritos"
+msgstr "Favorites"
+
 #: components/app/interface/settings/user/Feedback.tsx
 #: components/app/interface/settings/UserSettings.tsx
-msgid "Feedback"
-msgstr "Feedback"
+#~ msgid "Feedback"
+#~ msgstr "Feedback"
 
 #. placeholder {0}: humanFileSize(local.maxSize)
 #: components/ui/components/utils/Form2.tsx
@@ -1821,8 +1988,8 @@ msgid "GIFs are now powered by Gifbox"
 msgstr "GIFs are now powered by Gifbox"
 
 #: src/interface/Home.tsx
-msgid "Give feedback on StarknetChat"
-msgstr "Give feedback on StarknetChat"
+#~ msgid "Give feedback on StarknetChat"
+#~ msgstr "Give feedback on StarknetChat"
 
 #: components/modal/modals/ReportContent.tsx
 msgid "Give us some detail"
@@ -1857,6 +2024,18 @@ msgstr "Go to the Stoat Lounge"
 msgid "Good"
 msgstr "Good"
 
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "Good connection"
+msgstr "Good connection"
+
+#: components/modal/modals/MFAFlow.tsx
+msgid "Google account"
+msgstr "Google account"
+
+#: components/modal/modals/MFAFlow.tsx
+msgid "Google confirmation is not available right now."
+msgstr "Google confirmation is not available right now."
+
 #: components/ui/components/features/messaging/composition/picker/GifPicker.tsx
 msgid "Got a better GIF? Share it with everyone on Gifbox."
 msgstr "Got a better GIF? Share it with everyone on Gifbox."
@@ -1874,6 +2053,10 @@ msgstr "Grants {0} permissions and denies {1} permissions"
 #: components/modal/modals/CreateGroup.tsx
 msgid "Group Name"
 msgstr "Group Name"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Guardar"
+msgstr "Save"
 
 #: components/app/interface/settings/UserSettings.tsx
 msgid "Guidelines"
@@ -1896,12 +2079,12 @@ msgstr "Hear other people and see their video"
 #~ msgstr "Hello!"
 
 #: components/auth/src/AuthPage.tsx
-msgid "Help"
-msgstr "Help"
+#~ msgid "Help"
+#~ msgstr "Help"
 
 #: components/app/interface/settings/user/Language.tsx
-msgid "Help contribute to an existing or new language"
-msgstr "Help contribute to an existing or new language"
+#~ msgid "Help contribute to an existing or new language"
+#~ msgstr "Help contribute to an existing or new language"
 
 #: components/ui/components/features/profiles/ProfileBadges.tsx
 msgid "Helped translate StarknetChat"
@@ -1949,6 +2132,10 @@ msgstr "ID copied to clipboard"
 msgid "Idle"
 msgstr "Idle"
 
+#: components/app/interface/settings/user/Apps.tsx
+msgid "If Windows SmartScreen warns you when opening the installer, choose \"More info\" and then \"Run anyway\". The installer is not signed yet."
+msgstr "If Windows SmartScreen warns you when opening the installer, choose \"More info\" and then \"Run anyway\". The installer is not signed yet."
+
 #: components/modal/modals/ReportContent.tsx
 msgid "Illegal hacking or cracking"
 msgstr "Illegal hacking or cracking"
@@ -1964,6 +2151,10 @@ msgstr "Impersonation"
 #: src/AndroidNag.tsx
 msgid "In the meantime, install StarknetChat from Google Play for a faster, smoother experience designed for Android."
 msgstr "In the meantime, install StarknetChat from Google Play for a faster, smoother experience designed for Android."
+
+#: components/app/interface/settings/user/notifications/Sounds.tsx
+msgid "Incoming Call"
+msgstr "Incoming Call"
 
 #: components/app/interface/settings/user/voice/VoiceInputOptions.tsx
 msgid "Input Volume"
@@ -2108,8 +2299,8 @@ msgid "Learn more"
 msgstr "Learn more"
 
 #: components/app/interface/settings/user/bots/MyBots.tsx
-msgid "Learn more about how to create bots on StarknetChat."
-msgstr "Learn more about how to create bots on StarknetChat."
+#~ msgid "Learn more about how to create bots on StarknetChat."
+#~ msgstr "Learn more about how to create bots on StarknetChat."
 
 #: components/modal/modals/DeleteChannel.tsx
 #: components/modal/modals/LeaveServer.tsx
@@ -2136,8 +2327,8 @@ msgid "Let StarknetChat use its own custom titlebar."
 msgstr "Let StarknetChat use its own custom titlebar."
 
 #: src/interface/Home.tsx
-msgid "Let us know how we can improve our app by giving us feedback."
-msgstr "Let us know how we can improve our app by giving us feedback."
+#~ msgid "Let us know how we can improve our app by giving us feedback."
+#~ msgstr "Let us know how we can improve our app by giving us feedback."
 
 #: components/app/interface/settings/server/roles/ServerRoleEditor.tsx
 #: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
@@ -2194,6 +2385,10 @@ msgstr "Logging you in…"
 #: components/app/interface/settings/user/Sessions.tsx
 msgid "Logs you out of all sessions except this device."
 msgstr "Logs you out of all sessions except this device."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Look for a newer version now."
+msgstr "Look for a newer version now."
 
 #: components/app/interface/settings/server/emojis/EmojiList.tsx
 msgid "Lowercase letters, numbers and underscores only."
@@ -2268,6 +2463,18 @@ msgstr "Masquerade"
 #: components/ui/components/features/voice/callCard/VoiceCallCardActiveRoom.tsx
 msgid "Maximize call window"
 msgstr "Maximize call window"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Maximum (DeepFilterNet3)"
+msgstr "Maximum (DeepFilterNet3)"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Maximum quality (experimental)"
+msgstr "Maximum quality (experimental)"
+
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "Measuring…"
+msgstr "Measuring…"
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 #: components/app/interface/settings/ServerSettings.tsx
@@ -2350,6 +2557,10 @@ msgstr "Messaging"
 msgid "MFA setup canceled."
 msgstr "MFA setup canceled."
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Mi soundboard"
+msgstr "My soundboard"
+
 #: components/app/interface/settings/user/Native.tsx
 msgid "Minimise to Tray"
 msgstr "Minimise to Tray"
@@ -2370,6 +2581,10 @@ msgstr "Monospace Font"
 msgid "More Contrast"
 msgstr "More Contrast"
 
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Mouse buttons and single keys only work while StarknetChat is focused."
+msgstr "Mouse buttons and single keys only work while StarknetChat is focused."
+
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Move Members"
 msgstr "Move Members"
@@ -2378,6 +2593,10 @@ msgstr "Move Members"
 msgid "Move members between voice channels"
 msgstr "Move members between voice channels"
 
+#: components/app/menus/UserContextMenu.tsx
+msgid "Mover a…"
+msgstr "Move to…"
+
 #: components/i18n/errors.tsx
 msgid "Multi-factor authentication is already enabled for this account."
 msgstr "Multi-factor authentication is already enabled for this account."
@@ -2385,6 +2604,7 @@ msgstr "Multi-factor authentication is already enabled for this account."
 #: components/app/interface/settings/user/notifications/Sounds.tsx
 #: components/app/menus/UserContextMenu.tsx
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Mute"
 msgstr "Mute"
 
@@ -2407,6 +2627,10 @@ msgstr "Mute Screen Share"
 #: components/app/menus/ServerContextMenu.tsx
 msgid "Mute Server"
 msgstr "Mute Server"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Mute shortcut"
+msgstr "Mute shortcut"
 
 #: src/interface/navigation/servers/ServerList.tsx
 msgid "Muted"
@@ -2486,6 +2710,11 @@ msgstr "New unreads"
 msgid "Nickname"
 msgstr "Nickname"
 
+#. placeholder {0}: search()
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Ningún sonido coincide con «{0}»."
+msgstr "No sound matches “{0}”."
+
 #: components/ui/components/features/messaging/composition/picker/GifPicker.tsx
 msgid "No GIFs found"
 msgstr "No GIFs found"
@@ -2498,9 +2727,25 @@ msgstr "No permissions set yet"
 msgid "No role overrides have been configured."
 msgstr "No role overrides have been configured."
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "No se pudieron cargar los sonidos del servidor"
+msgstr "Could not load the server sounds"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "No se pudo eliminar el sonido"
+msgstr "Could not delete the sound"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "No se pudo subir el sonido"
+msgstr "Could not upload the sound"
+
 #: src/interface/Friends.tsx
 msgid "Nobody here right now!"
 msgstr "Nobody here right now!"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Nombre del sonido"
+msgstr "Sound name"
 
 #: components/app/menus/ServerContextMenu.tsx
 #: components/app/menus/shared/NotificationContextMenu.tsx
@@ -2511,9 +2756,25 @@ msgstr "None"
 msgid "Normal"
 msgstr "Normal"
 
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Not available yet. Coming soon."
+msgstr "Not available yet. Coming soon."
+
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "Not encrypted"
+msgstr "Not encrypted"
+
 #: components/modal/modals/ReportContent.tsx
 msgid "Not of minimum age to use the platform"
 msgstr "Not of minimum age to use the platform"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Not set. Click to choose a key combination."
+msgstr "Not set. Click to choose a key combination."
+
+#: components/modal/modals/ScreenSharePicker.tsx
+msgid "Note: in the desktop app, shared audio includes all system sound, not only the selected window."
+msgstr "Note: in the desktop app, shared audio includes all system sound, not only the selected window."
 
 #: components/app/interface/settings/UserSettings.tsx
 #: components/app/menus/ServerContextMenu.tsx
@@ -2610,9 +2871,21 @@ msgstr "Open server settings"
 msgid "Open settings"
 msgstr "Open settings"
 
+#: src/gamepad/GamepadController.tsx
+msgid "Options"
+msgstr "Options"
+
+#: components/auth/src/flows/GoogleSignInButton.tsx
+msgid "or"
+msgstr "or"
+
 #: components/modal/modals/ReportContent.tsx
 msgid "Other"
 msgstr "Other"
+
+#: components/app/interface/settings/user/notifications/Sounds.tsx
+msgid "Outgoing Call"
+msgstr "Outgoing Call"
 
 #: components/app/interface/settings/user/voice/VoiceInputOptions.tsx
 msgid "Output Volume"
@@ -2714,9 +2987,29 @@ msgstr "Please select a method to authenticate your request."
 msgid "Please select a reason"
 msgstr "Please select a reason"
 
+#: components/ui/components/features/voice/callCard/VoiceCallCardStatus.tsx
+msgid "Poor connection"
+msgstr "Poor connection"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Powered by DeepFilterNet3. Better voice quality, uses more CPU. Falls back to Enhanced if it cannot load."
+msgstr "Powered by DeepFilterNet3. Better voice quality, uses more CPU. Falls back to Enhanced if it cannot load."
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Powered by DeepFilterNet3. Your device has few CPU cores, so this may cause choppy audio. Use Enhanced if it does."
+msgstr "Powered by DeepFilterNet3. Your device has few CPU cores, so this may cause choppy audio. Use Enhanced if it does."
+
 #: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
 msgid "Powered by RNNoise"
 msgstr "Powered by RNNoise"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
+msgstr "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+#~ msgid "Press the new key combination. Backspace removes it, Esc cancels."
+#~ msgstr "Press the new key combination. Backspace removes it, Esc cancels."
 
 #: components/app/interface/settings/server/roles/ServerRoleEditor.tsx
 msgid "Preview"
@@ -2760,6 +3053,10 @@ msgstr "Pronouns"
 #: components/i18n/errors.tsx
 msgid "Provided email or password is wrong."
 msgstr "Provided email or password is wrong."
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Quitar de favoritos"
+msgstr "Remove from favorites"
 
 #: components/modal/modals/ReportContent.tsx
 msgid "Raid or spam attack"
@@ -3108,6 +3405,10 @@ msgstr "Search for users..."
 #~ msgid "See what we're currently working on."
 #~ msgstr "See what we're currently working on."
 
+#: src/gamepad/GamepadController.tsx
+msgid "Select"
+msgstr "Select"
+
 #: components/app/interface/settings/user/voice/VoiceInputOptions.tsx
 msgid "Select audio input"
 msgstr "Select audio input"
@@ -3135,6 +3436,10 @@ msgstr "Select video input"
 #: components/app/interface/settings/user/Language.tsx
 msgid "Select your language"
 msgstr "Select your language"
+
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Send"
+msgstr "Send"
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Send attachments to chat"
@@ -3251,6 +3556,7 @@ msgid "Set your status"
 msgstr "Set your status"
 
 #: components/modal/modals/ServerInfo.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Settings"
 msgstr "Settings"
 
@@ -3279,6 +3585,10 @@ msgstr "Share camera or screen in voice call"
 msgid "Share screen"
 msgstr "Share screen"
 
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Shift"
+msgstr "Shift"
+
 #: components/app/interface/settings/user/Native.tsx
 msgid "Show corrections and suggestions as you type."
 msgstr "Show corrections and suggestions as you type."
@@ -3290,6 +3600,10 @@ msgstr "Show Others"
 #: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
 msgid "Show send message button"
 msgstr "Show send message button"
+
+#: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
+msgid "Show the on-screen keyboard when typing with a controller"
+msgstr "Show the on-screen keyboard when typing with a controller"
 
 #: components/auth/src/flows/FlowLogin.tsx
 #~ msgid "Sign into Stoat"
@@ -3340,13 +3654,26 @@ msgstr "Something went wrong! {error}"
 #~ msgid "Something went wrong! Try again later."
 #~ msgstr "Something went wrong! Try again later."
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Soundboard"
+msgstr "Soundboard"
+
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Soundboard del servidor"
+msgstr "Server soundboard"
+
 #: components/app/interface/settings/user/notifications/Sounds.tsx
+#: components/app/interface/settings/user/Sync.tsx
 msgid "Sounds"
 msgstr "Sounds"
 
 #: components/app/interface/settings/UserSettings.tsx
 msgid "Source Code"
 msgstr "Source Code"
+
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Space"
+msgstr "Space"
 
 #: components/modal/modals/ReportContent.tsx
 msgid "Spam or similar platform abuse"
@@ -3367,6 +3694,34 @@ msgstr "Spellchecker"
 #: components/app/interface/settings/user/profile/UserProfileEditor.tsx
 msgid "Square"
 msgstr "Square"
+
+#: components/ui/components/features/profiles/ProfileBadges.tsx
+msgid "StarknetChat Developer"
+msgstr "StarknetChat Developer"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "StarknetChat for Desktop"
+msgstr "StarknetChat for Desktop"
+
+#: components/ui/components/features/profiles/ProfileBadges.tsx
+msgid "StarknetChat Founder"
+msgstr "StarknetChat Founder"
+
+#: components/app/interface/settings/server/roles/ServerRoleEditor.tsx
+msgid "StarknetChat rocks!"
+msgstr "StarknetChat rocks!"
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "StarknetChat will start in the system tray."
+msgstr "StarknetChat will start in the system tray."
+
+#: src/AndroidNag.tsx
+msgid "StarknetChat works best as an app"
+msgstr "StarknetChat works best as an app"
+
+#: components/auth/src/AppUpsell.tsx
+msgid "StarknetChat, right on <0>your desktop.</0>"
+msgstr "StarknetChat, right on <0>your desktop.</0>"
 
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
 msgid "Start camera"
@@ -3392,37 +3747,9 @@ msgstr "Status"
 #~ msgid "Stoat Desktop"
 #~ msgstr "Stoat Desktop"
 
-#: components/ui/components/features/profiles/ProfileBadges.tsx
-msgid "StarknetChat Developer"
-msgstr "StarknetChat Developer"
-
-#: components/app/interface/settings/user/Native.tsx
-msgid "StarknetChat for Desktop"
-msgstr "StarknetChat for Desktop"
-
-#: components/ui/components/features/profiles/ProfileBadges.tsx
-msgid "StarknetChat Founder"
-msgstr "StarknetChat Founder"
-
 #: components/auth/src/flows/FlowHome.tsx
 #~ msgid "Stoat is one of the best ways to stay connected with your friends and community, anywhere, anytime."
 #~ msgstr "Stoat is one of the best ways to stay connected with your friends and community, anywhere, anytime."
-
-#: components/app/interface/settings/server/roles/ServerRoleEditor.tsx
-msgid "StarknetChat rocks!"
-msgstr "StarknetChat rocks!"
-
-#: components/app/interface/settings/user/Native.tsx
-msgid "StarknetChat will start in the system tray."
-msgstr "StarknetChat will start in the system tray."
-
-#: src/AndroidNag.tsx
-msgid "StarknetChat works best as an app"
-msgstr "StarknetChat works best as an app"
-
-#: components/auth/src/AppUpsell.tsx
-msgid "StarknetChat, right on <0>your desktop.</0>"
-msgstr "StarknetChat, right on <0>your desktop.</0>"
 
 #: components/ui/components/features/voice/callCard/VoiceCallCardActions.tsx
 msgid "Stop camera"
@@ -3440,13 +3767,17 @@ msgstr "Stream End"
 msgid "Stream Start"
 msgstr "Stream Start"
 
-#: components/app/interface/settings/user/Feedback.tsx
-msgid "Submit feature suggestion"
-msgstr "Submit feature suggestion"
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Subiendo…"
+msgstr "Uploading…"
 
 #: components/app/interface/settings/user/Feedback.tsx
-msgid "Submit feedback"
-msgstr "Submit feedback"
+#~ msgid "Submit feature suggestion"
+#~ msgstr "Submit feature suggestion"
+
+#: components/app/interface/settings/user/Feedback.tsx
+#~ msgid "Submit feedback"
+#~ msgstr "Submit feedback"
 
 #: components/app/interface/settings/shared/Discoverable.tsx
 msgid "Submit to Discover"
@@ -3457,20 +3788,28 @@ msgid "Subscriptions"
 msgstr "Subscriptions"
 
 #: components/app/interface/settings/user/Feedback.tsx
-msgid "Suggest new StarknetChat features on GitHub discussions."
-msgstr "Suggest new StarknetChat features on GitHub discussions."
+#~ msgid "Suggest new StarknetChat features on GitHub discussions."
+#~ msgstr "Suggest new StarknetChat features on GitHub discussions."
 
 #: src/interface/Home.tsx
-msgid "Support the project by donating - thank you!"
-msgstr "Support the project by donating - thank you!"
+#~ msgid "Support the project by donating - thank you!"
+#~ msgstr "Support the project by donating - thank you!"
 
 #: components/ui/components/features/voice/callCard/VoiceCallCardPreview.tsx
 msgid "Switch to this voice channel"
 msgstr "Switch to this voice channel"
 
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Symbols"
+msgstr "Symbols"
+
 #: components/app/interface/settings/user/Sync.tsx
 msgid "Sync appearance options, such as chosen emoji pack and message density."
 msgstr "Sync appearance options, such as chosen emoji pack and message density."
+
+#: components/app/interface/settings/user/Sync.tsx
+msgid "Sync which sound effects are enabled."
+msgstr "Sync which sound effects are enabled."
 
 #: components/app/interface/settings/user/Sync.tsx
 msgid "Sync your chosen theme, colours, and any custom CSS."
@@ -3479,6 +3818,10 @@ msgstr "Sync your chosen theme, colours, and any custom CSS."
 #: components/app/interface/settings/user/Sync.tsx
 msgid "Sync your currently chosen language."
 msgstr "Sync your currently chosen language."
+
+#: components/app/interface/settings/user/Sync.tsx
+msgid "Sync your voice preferences, such as noise suppression and volume levels. Your chosen microphone/speakers stay on this device."
+msgstr "Sync your voice preferences, such as noise suppression and volume levels. Your chosen microphone/speakers stay on this device."
 
 #: components/app/interface/settings/user/appearance/AppearanceMenu.tsx
 msgid "System"
@@ -3491,6 +3834,10 @@ msgstr "System message channels"
 #: components/auth/src/AppUpsell.tsx
 msgid "Take your communities <0>with you.</0>"
 msgstr "Take your communities <0>with you.</0>"
+
+#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
+msgid "Technical details to find out why the microphone or noise suppression fails."
+msgstr "Technical details to find out why the microphone or noise suppression fails."
 
 #: components/modal/modals/ReportContent.tsx
 msgid "Tell us what's wrong with this message"
@@ -3509,7 +3856,6 @@ msgid "Temporarily prevent lower-ranking members from interacting"
 msgstr "Temporarily prevent lower-ranking members from interacting"
 
 #: components/app/interface/settings/UserSettings.tsx
-#: components/auth/src/AuthPage.tsx
 msgid "Terms"
 msgstr "Terms"
 
@@ -3591,6 +3937,10 @@ msgstr "This channel is marked as mature."
 msgid "This channel is not available in your region while we review options on legal compliance."
 msgstr "This channel is not available in your region while we review options on legal compliance."
 
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "This combination is already used by the other shortcut."
+msgstr "This combination is already used by the other shortcut."
+
 #: src/interface/channels/AgeGate.tsx
 msgid "This content is not available in your region."
 msgstr "This content is not available in your region."
@@ -3641,8 +3991,12 @@ msgid "This server is about..."
 msgstr "This server is about..."
 
 #: components/i18n/errors.tsx
-msgid "This sign up is marked as spam. Please see <0>this support article.</0>"
-msgstr "This sign up is marked as spam. Please see <0>this support article.</0>"
+msgid "This sign up is marked as spam. Please contact the instance administrator."
+msgstr "This sign up is marked as spam. Please contact the instance administrator."
+
+#: components/i18n/errors.tsx
+#~ msgid "This sign up is marked as spam. Please see <0>this support article.</0>"
+#~ msgstr "This sign up is marked as spam. Please see <0>this support article.</0>"
 
 #: components/i18n/errors.tsx
 msgid "This user has blocked you."
@@ -3719,6 +4073,10 @@ msgstr "Troubleshooting"
 msgid "Try again"
 msgstr "Try again"
 
+#: src/gamepad/OnScreenKeyboard.tsx
+msgid "Type"
+msgstr "Type"
+
 #: components/app/menus/UserContextMenu.tsx
 msgid "Unblock user"
 msgstr "Unblock user"
@@ -3793,6 +4151,14 @@ msgstr "Unsolicited advertising or spam"
 msgid "Until I turn it back on"
 msgstr "Until I turn it back on"
 
+#: components/app/interface/settings/user/Native.tsx
+msgid "Update ready. Click to restart and install."
+msgstr "Update ready. Click to restart and install."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "Updates are managed by the Microsoft Store."
+msgstr "Updates are managed by the Microsoft Store."
+
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Upload Files"
 msgstr "Upload Files"
@@ -3804,6 +4170,10 @@ msgstr "Upload to Gifbox"
 #: components/modal/modals/JoinServer.tsx
 msgid "Use a code or invite link"
 msgstr "Use a code or invite link"
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Use Ctrl, Alt or Shift together with this key."
+msgstr "Use Ctrl, Alt or Shift together with this key."
 
 #: components/app/interface/settings/user/Native.tsx
 msgid "Use the graphics card to improve performance."
@@ -3910,8 +4280,8 @@ msgid "View Channel"
 msgstr "View Channel"
 
 #: components/app/interface/settings/user/Feedback.tsx
-msgid "View currently active bug reports here."
-msgstr "View currently active bug reports here."
+#~ msgid "View currently active bug reports here."
+#~ msgstr "View currently active bug reports here."
 
 #: src/interface/channels/ChannelHeader.tsx
 msgid "View members"
@@ -3938,7 +4308,9 @@ msgid "Viewing older messages"
 msgstr "Viewing older messages"
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
+#: components/app/interface/settings/user/Sync.tsx
 #: components/app/interface/settings/UserSettings.tsx
+#: src/gamepad/GamepadController.tsx
 msgid "Voice"
 msgstr "Voice"
 
@@ -3958,17 +4330,29 @@ msgstr "Voice Processing"
 msgid "Volume"
 msgstr "Volume"
 
+#: components/ui/components/features/voice/callCard/SoundboardButton.tsx
+msgid "Volumen del soundboard"
+msgstr "Soundboard volume"
+
 #: components/app/interface/settings/user/profile/UserProfileEditor.tsx
 msgid "Want to change username?"
 msgstr "Want to change username?"
+
+#: components/modal/modals/ScreenSharePicker.tsx
+msgid "Warning: on this system shared audio also includes the voices of the call, so viewers may hear an echo. Use headphones or turn off \"Share audio\"."
+msgstr "Warning: on this system shared audio also includes the voices of the call, so viewers may hear an echo. Use headphones or turn off \"Share audio\"."
 
 #: src/AndroidNag.tsx
 msgid "We are working hard on optimising our web app for mobile."
 msgstr "We are working hard on optimising our web app for mobile."
 
 #: components/auth/src/flows/FlowLogin.tsx
-msgid "We couldn't finish logging you in. Try again, and if it keeps happening, check StarknetChat's status."
-msgstr "We couldn't finish logging you in. Try again, and if it keeps happening, check StarknetChat's status."
+#~ msgid "We couldn't finish logging you in. Try again, and if it keeps happening, check StarknetChat's status."
+#~ msgstr "We couldn't finish logging you in. Try again, and if it keeps happening, check StarknetChat's status."
+
+#: components/auth/src/flows/FlowLogin.tsx
+msgid "We couldn't finish logging you in. Try again, and if it keeps happening, contact the instance administrator."
+msgstr "We couldn't finish logging you in. Try again, and if it keeps happening, contact the instance administrator."
 
 #: components/auth/src/flows/FlowCreate.tsx
 msgid "We only use it to verify your account and help you get back in if you're ever locked out. We'll never sell it or send you spam."
@@ -4017,12 +4401,16 @@ msgid "What's new"
 msgstr "What's new"
 
 #: components/app/interface/settings/UserSettings.tsx
-msgid "What's New"
-msgstr "What's New"
+#~ msgid "What's New"
+#~ msgstr "What's New"
 
 #: components/app/interface/settings/channel/permissions/ChannelPermissionsEditor.tsx
 msgid "Whether other users can edit these settings"
 msgstr "Whether other users can edit these settings"
+
+#: components/app/interface/settings/user/Apps.tsx
+msgid "Windows installer. It updates itself in the background."
+msgstr "Windows installer. It updates itself in the background."
 
 #. placeholder {0}: names.join(", ")
 #: components/ui/components/features/voice/callCard/VoiceCallCardPreview.tsx
@@ -4039,6 +4427,14 @@ msgstr "with {0}"
 msgid "with {0} others"
 msgstr "with {0} others"
 
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Works even when StarknetChat is in the background. The combination is reserved while you are in a call."
+msgstr "Works even when StarknetChat is in the background. The combination is reserved while you are in a call."
+
+#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
+msgid "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
+msgstr "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
+
 #: components/modal/modals/CreateGroupOrServer.tsx
 msgid "Would you like to create a new group or server?"
 msgstr "Would you like to create a new group or server?"
@@ -4046,6 +4442,14 @@ msgstr "Would you like to create a new group or server?"
 #: components/modal/modals/CreateOrJoinServer.tsx
 msgid "Would you like to create a new server or join an existing one?"
 msgstr "Would you like to create a new server or join an existing one?"
+
+#: src/gamepad/GamepadController.tsx
+msgid "Write"
+msgstr "Write"
+
+#: components/i18n/errors.tsx
+msgid "Ya existe una cuenta con este correo. Inicie sesión, o pulse «¿Has olvidado tu contraseña?» si no la recuerda."
+msgstr "An account with this email already exists. Sign in, or press “Forgot your password?” if you don't remember it."
 
 #: components/app/interface/settings/user/bots/MyBots.tsx
 msgid "You agree that your bot is subject to the Acceptable Usage Policy."
@@ -4066,6 +4470,10 @@ msgstr "You are about to kick {0}"
 #: components/i18n/errors.tsx
 msgid "You are banned from this server."
 msgstr "You are banned from this server."
+
+#: components/app/interface/settings/user/Native.tsx
+msgid "You are on the latest version."
+msgstr "You are on the latest version."
 
 #: components/ui/components/features/messaging/composition/MessageBox.tsx
 msgid "You are timed out and can't send messages right now."
@@ -4273,66 +4681,6 @@ msgstr "Your session ended, possibly because you logged out on another device. L
 msgid "Your user has already been created? Try logging in again or refreshing the app."
 msgstr "Your user has already been created? Try logging in again or refreshing the app."
 
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Mute shortcut"
-msgstr "Mute shortcut"
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Deafen shortcut"
-msgstr "Deafen shortcut"
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Press the new key combination. Backspace removes it, Esc cancels."
-msgstr "Press the new key combination. Backspace removes it, Esc cancels."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Not set. Click to choose a key combination."
-msgstr "Not set. Click to choose a key combination."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Another application is already using this combination."
-msgstr "Another application is already using this combination."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "This combination is already used by the other shortcut."
-msgstr "This combination is already used by the other shortcut."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Works even when StarknetChat is in the background. The combination is reserved while you are in a call."
-msgstr "Works even when StarknetChat is in the background. The combination is reserved while you are in a call."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
-msgstr "Works only while this tab is open and focused. Use the desktop app for shortcuts that work in the background."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Use Ctrl, Alt or Shift together with this key."
-msgstr "Use Ctrl, Alt or Shift together with this key."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
-msgstr "Press the new key combination or a mouse button. Backspace removes it, Esc cancels."
-
-#: components/app/interface/settings/user/voice/VoiceShortcutOptions.tsx
-msgid "Mouse buttons and single keys only work while StarknetChat is focused."
-msgstr "Mouse buttons and single keys only work while StarknetChat is focused."
-
-#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
-msgid "Copy audio log"
-msgstr "Copy audio log"
-
-#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
-msgid "Copied. Paste it in a message to the person helping you."
-msgstr "Copied. Paste it in a message to the person helping you."
-
-#: components/app/interface/settings/user/voice/VoiceProcessingOptions.tsx
-msgid "Technical details to find out why the microphone or noise suppression fails."
-msgstr "Technical details to find out why the microphone or noise suppression fails."
-
-#: components/ui/components/features/voice/VoiceStatefulUserIcons.tsx
-msgid "Deafened"
-msgstr "Deafened"
-
-#: components/auth/src/flows/GoogleSignInButton.tsx
-msgid "Continue with Google"
-msgstr "Continue with Google"
+#: src/gamepad/GamepadController.tsx
+msgid "Zone"
+msgstr "Zone"

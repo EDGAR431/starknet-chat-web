@@ -3,7 +3,6 @@ import {
   TrackReference,
   useEnsureParticipant,
   useIsMuted,
-  useIsSpeaking,
   useTrackRefContext,
   VideoTrack,
 } from "solid-livekit-components";
@@ -15,6 +14,7 @@ import { styled } from "styled-system/jsx";
 import { UserContextMenu } from "@revolt/app";
 import { useUser } from "@revolt/markdown/users";
 import { useParticipantDeafened, useVoice } from "@revolt/rtc";
+import { useSpeaking } from "@revolt/rtc/useSpeaking";
 import { useState } from "@revolt/state";
 import { Avatar } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
@@ -76,7 +76,7 @@ export function ParticipantTile(props: TileProps) {
   const isRemoteStream = () => isScreenShare() && !participant.isLocal;
   const watching = () =>
     !isRemoteStream() || voice.isWatching(participant.identity);
-  const isSpeaking = useIsSpeaking(participant);
+  const isSpeaking = useSpeaking(participant);
 
   const getHeight = () => {
     if (!props.focus || videoDims().height == 0) return {};
@@ -235,7 +235,8 @@ export const tile = cva({
   base: {
     display: "grid",
     aspectRatio: "16/9",
-    transition: "all .3s ease, width 0s, height 0s",
+    transition:
+      "all .3s ease, outline-color .08s ease-out, width 0s, height 0s",
     borderRadius: "var(--borderRadius-lg)",
     width: "var(--vc-tile-width)",
     maxWidth: "calc(var(--vc-h) * 16 / 9)",

@@ -5,7 +5,7 @@ import { useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
 import { Slider, Symbol, Text } from "@revolt/ui";
 import { useNavigate } from "@solidjs/router";
-import { type JSX, Match, Show, Switch } from "solid-js";
+import { For, type JSX, Match, Show, Switch } from "solid-js";
 import type { Channel, Message, ServerMember, User } from "stoat.js";
 import { styled } from "styled-system/jsx";
 
@@ -13,6 +13,7 @@ import {
   ContextMenu,
   ContextMenuButton,
   ContextMenuDivider,
+  ContextMenuSubMenu,
 } from "./ContextMenu";
 import { NotificationContextMenu } from "./shared/NotificationContextMenu";
 
@@ -317,6 +318,60 @@ export function UserContextMenu(props: {
     );
   }
 
+  /**
+   * Voice channel in which the target member currently is (if any)
+   */
+  function currentVoiceChannel() {
+    return props.member?.server?.channels.find((c) =>
+      c.voiceParticipants.has(props.user.id),
+    );
+  }
+
+  /**
+   * Whether the user can move / disconnect the member from voice
+   */
+  function canMoveFromVoice() {
+    const channel = currentVoiceChannel();
+    return (
+      !!props.inVoice &&
+      !props.user.self &&
+      !!channel &&
+      channel.havePermission("MoveMembers") &&
+      !!props.member?.server?.member &&
+      props.member.inferiorTo(props.member.server.member)
+    );
+  }
+
+  /**
+   * Voice channels the member can be moved to
+   */
+  function moveTargets() {
+    const current = currentVoiceChannel();
+    return (
+      props.member?.server?.channels.filter(
+        (c) =>
+          c.id !== current?.id &&
+          c.type === "TextChannel" &&
+          c.isVoice &&
+          c.havePermission("MoveMembers"),
+      ) ?? []
+    );
+  }
+
+  function moveTo(channelId: string) {
+    props.member
+      ?.edit({ voice_channel: channelId })
+      .catch((e) => console.error("mover miembro:", e));
+    props.onClose?.();
+  }
+
+  function disconnectFromVoice() {
+    props.member
+      ?.edit({ remove: ["VoiceChannel"] })
+      .catch((e) => console.error("desconectar miembro:", e));
+    props.onClose?.();
+  }
+
   return (
     <ContextMenu class="UserContextMenu">
       {/* Voice controls */}
@@ -368,6 +423,39 @@ export function UserContextMenu(props: {
           }
         >
           <Trans>Mute</Trans>
+        </ContextMenuButton>
+        <ContextMenuDivider />
+      </Show>
+      <Show when={canMoveFromVoice()}>
+        <Show when={moveTargets().length}>
+          <ContextMenuSubMenu
+            buttonContent={
+              <>
+                <IconSlot>
+                  <Symbol size={16}>drive_file_move</Symbol>
+                </IconSlot>
+                <Trans>Mover a…</Trans>
+              </>
+            }
+          >
+            <For each={moveTargets()}>
+              {(c) => (
+                <ContextMenuButton onClick={() => moveTo(c.id)}>
+                  {c.name}
+                </ContextMenuButton>
+              )}
+            </For>
+          </ContextMenuSubMenu>
+        </Show>
+        <ContextMenuButton
+          symbol={
+            <IconSlot>
+              <Symbol size={16}>call_end</Symbol>
+            </IconSlot>
+          }
+          onClick={disconnectFromVoice}
+        >
+          <Trans>Desconectar de la llamada</Trans>
         </ContextMenuButton>
         <ContextMenuDivider />
       </Show>

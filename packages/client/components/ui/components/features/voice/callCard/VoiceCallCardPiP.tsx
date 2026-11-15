@@ -4,7 +4,6 @@ import {
   TrackReference,
   useEnsureParticipant,
   useIsMuted,
-  useIsSpeaking,
   useTrackRefContext,
   useTracks,
   VideoTrack,
@@ -15,6 +14,7 @@ import { styled } from "styled-system/jsx";
 
 import { useUser } from "@revolt/markdown/users";
 import { useVoice } from "@revolt/rtc";
+import { useSpeaking } from "@revolt/rtc/useSpeaking";
 import { Avatar } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
@@ -71,7 +71,7 @@ function ConnectedUser() {
     source: Track.Source.Microphone,
   });
 
-  const isSpeaking = useIsSpeaking(participant);
+  const isSpeaking = useSpeaking(participant);
   const user = useUser(participant.identity);
 
   return (
