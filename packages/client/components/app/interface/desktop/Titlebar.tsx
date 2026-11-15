@@ -2,6 +2,7 @@ import {
   Match,
   Show,
   Switch,
+  createEffect,
   createSignal,
   onCleanup,
   onMount,
@@ -30,6 +31,12 @@ import {
 
 const isMacOS = navigator.platform.startsWith("Mac");
 const isNative = !!window.native;
+/**
+ * Escritorio de Windows con barra nativa superpuesta (>= 1.7.14): Windows
+ * arrastra la ventana y dibuja los botones; aqui solo se pinta la barra.
+ */
+const nativeOverlay =
+  isNative && !isMacOS && !!window.native.nativeOverlay?.();
 
 /**
  * Arrastre de respaldo. Normalmente `-webkit-app-region: drag` hace todo el
@@ -62,7 +69,7 @@ function fallbackDragHandlers(
 
   return {
     onPointerDown: (e: PointerEvent & { currentTarget: HTMLElement }) => {
-      if (!isNative || isMacOS || e.button !== 0) return;
+      if (!isNative || isMacOS || nativeOverlay || e.button !== 0) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
       if (!window.native.dragStart) return;
 
@@ -103,7 +110,7 @@ function fallbackDragHandlers(
       window.native.dragStart();
     },
     onDblClick: (e: MouseEvent) => {
-      if (!isNative || isMacOS) return;
+      if (!isNative || isMacOS || nativeOverlay) return;
       if ((e.target as HTMLElement).closest("a,button")) return;
       log("web: doble clic (maximizar/restaurar)");
       maximise();
@@ -150,9 +157,34 @@ export function Titlebar() {
     onCleanup(() => window.removeEventListener("resize", check));
   });
   const dragRegion = () =>
-    isMaximised() || fills() || dragging() ? "no-drag" : "drag";
+    nativeOverlay ? "drag" : isMaximised() || fills() || dragging() ? "no-drag" : "drag";
 
   const dragHandlers = fallbackDragHandlers(maximise, setDragging);
+
+  // los botones nativos toman el color de la barra (normal o desconectado)
+  createEffect(() => {
+    isDisconnected();
+    if (!nativeOverlay) return;
+    setTimeout(() => {
+      const el = document.getElementById("starknet-titlebar");
+      if (!el) return;
+      const toHex = (c: string) => {
+        const m = c.match(/\d+(\.\d+)?/g);
+        if (!m || m.length < 3) return undefined;
+        return (
+          "#" +
+          m
+            .slice(0, 3)
+            .map((n) => Math.round(Number(n)).toString(16).padStart(2, "0"))
+            .join("")
+        );
+      };
+      const cs = getComputedStyle(el);
+      const bg = toHex(cs.backgroundColor);
+      const fg = toHex(cs.fill) ?? toHex(cs.color);
+      if (bg && fg) window.native.setTitleBarOverlay?.(bg, fg);
+    }, 350);
+  });
 
   return (
     <Presence>
@@ -168,7 +200,7 @@ export function Titlebar() {
           exit={{ height: 0 }}
           style={{ overflow: "hidden", "flex-shrink": 0 }}
         >
-          <Base disconnected={isDisconnected()}>
+          <Base id="starknet-titlebar" disconnected={isDisconnected()}>
             <Title
               macos={isMacOS}
               onPointerDown={dragHandlers.onPointerDown}
@@ -246,7 +278,17 @@ export function Titlebar() {
                 </div>
               </Show>
             </DragHandle>
-            <Show when={isNative && !isMacOS}>
+            <Show when={nativeOverlay}>
+              {/* hueco de los botones nativos de Windows */}
+              <div
+                style={{
+                  width:
+                    "calc(100vw - env(titlebar-area-width, calc(100vw - 138px)))",
+                  "flex-shrink": 0,
+                }}
+              />
+            </Show>
+            <Show when={isNative && !isMacOS && !nativeOverlay}>
               <Action onClick={window.native.minimise}>
                 <Ripple />
                 <MdMinimize {...symbolSize(20)} />
