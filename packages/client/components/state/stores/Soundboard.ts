@@ -66,6 +66,12 @@ export interface TypeSoundboard {
    * Master volume applied on top of each sound's own volume, 0 to 2.
    */
   masterVolume: number;
+
+  /**
+   * Ids of the sounds (personal or server) the user pinned as favourites;
+   * they are shown first in the panel. Kept per device.
+   */
+  favorites: string[];
 }
 
 /**
@@ -94,6 +100,7 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
     return {
       personalSounds: [],
       masterVolume: 1.0,
+      favorites: [],
     };
   }
 
@@ -126,6 +133,12 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
         .slice(0, 100);
     }
 
+    if (Array.isArray(input.favorites)) {
+      data.favorites = input.favorites
+        .filter((id): id is string => typeof id === "string")
+        .slice(0, 200);
+    }
+
     if (typeof input.masterVolume === "number") {
       data.masterVolume = Math.min(2, Math.max(0, input.masterVolume));
     }
@@ -149,6 +162,63 @@ export class Soundboard extends AbstractStore<"soundboard", TypeSoundboard> {
 
   set masterVolume(value: number) {
     this.set("masterVolume", Math.min(2, Math.max(0, value)));
+  }
+
+  /** Ids of the pinned favourite sounds */
+  get favorites(): string[] {
+    return this.get().favorites;
+  }
+
+  /** Whether a sound is pinned as favourite */
+  isFavorite(id: string): boolean {
+    return this.get().favorites.includes(id);
+  }
+
+  /** Pin / unpin a sound as favourite */
+  toggleFavorite(id: string) {
+    const current = this.get().favorites;
+    this.set(
+      "favorites",
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+    );
+  }
+
+  /**
+   * Refresh the personal sounds from the backend (`GET /soundboard/personal`)
+   * so a new device or browser sees the sounds uploaded elsewhere. Silent if
+   * the backend does not have the route yet or the call fails.
+   */
+  async syncPersonal(client: Client): Promise<void> {
+    try {
+      const list = (await (
+        client.api as unknown as {
+          get(path: string): Promise<unknown>;
+        }
+      ).get("/soundboard/personal")) as Array<{
+        _id: string;
+        name: string;
+        emoji?: string | null;
+        file_id: string;
+        volume: number;
+        is_default?: boolean;
+      }>;
+      if (!Array.isArray(list)) return;
+      const fetched: SoundboardSound[] = list.map((s) => ({
+        id: s._id,
+        name: s.name,
+        emoji: s.emoji ?? undefined,
+        fileId: s.file_id,
+        volume: s.volume,
+        isDefault: !!s.is_default,
+      }));
+      // Keep any defaults the cache already has; replace the rest
+      const defaults = this.get().personalSounds.filter(
+        (s) => s.isDefault && !fetched.some((f) => f.id === s.id),
+      );
+      this.set("personalSounds", [...defaults, ...fetched].slice(0, 100));
+    } catch {
+      /* the cache keeps working without the sync */
+    }
   }
 
   /**

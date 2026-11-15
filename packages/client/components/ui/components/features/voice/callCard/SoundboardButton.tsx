@@ -4,8 +4,10 @@ import {
   For,
   Show,
   createEffect,
+  createMemo,
   createSignal,
   onCleanup,
+  onMount,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { styled } from "styled-system/jsx";
@@ -76,6 +78,85 @@ export function SoundboardButton(props: { size: "xs" | "sm" }) {
 }
 
 type Scope = "personal" | "server";
+
+type PanelSound = {
+  id: string;
+  name: string;
+  emoji?: string;
+  fileId: string;
+  volume: number;
+  isDefault: boolean;
+};
+
+/** Pulso corto al pulsar un sonido (respeta "reducir movimiento") */
+function pressFeedback(el: HTMLElement) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  el.animate(
+    [{ transform: "scale(0.93)" }, { transform: "scale(1)" }],
+    { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" },
+  );
+  el.animate(
+    [
+      { boxShadow: "0 0 0 0 var(--md-sys-color-primary)" },
+      { boxShadow: "0 0 0 7px transparent" },
+    ],
+    { duration: 420, easing: "ease-out" },
+  );
+}
+
+function SoundCard(props: {
+  sound: PanelSound;
+  canRemove: boolean;
+  onPlay: (sound: PanelSound) => void;
+  onRemove: () => void;
+}) {
+  const { t } = useLingui();
+  const state = useState();
+  const pinned = () => state.soundboard.isFavorite(props.sound.id);
+
+  return (
+    <Tile>
+      <TileButton
+        title={props.sound.name}
+        onClick={(e: MouseEvent) => {
+          pressFeedback(e.currentTarget as HTMLElement);
+          props.onPlay(props.sound);
+        }}
+      >
+        <Emoji>{props.sound.emoji ?? "🔊"}</Emoji>
+        <SoundName>{props.sound.name}</SoundName>
+      </TileButton>
+      <TileAction
+        data-action
+        data-side="left"
+        data-pinned={pinned()}
+        title={pinned() ? t`Quitar de favoritos` : t`Añadir a favoritos`}
+        onClick={(e: MouseEvent) => {
+          e.stopPropagation();
+          state.soundboard.toggleFavorite(props.sound.id);
+        }}
+      >
+        <Symbol size={16} fill={pinned()}>
+          star
+        </Symbol>
+      </TileAction>
+      <Show when={props.canRemove}>
+        <TileAction
+          data-action
+          data-side="right"
+          data-danger
+          title={t`Eliminar`}
+          onClick={(e: MouseEvent) => {
+            e.stopPropagation();
+            props.onRemove();
+          }}
+        >
+          <Symbol size={16}>close</Symbol>
+        </TileAction>
+      </Show>
+    </Tile>
+  );
+}
 
 function SoundboardPanel(props: {
   anchor: () => HTMLElement | undefined;
@@ -184,15 +265,38 @@ function SoundboardPanel(props: {
   const [soundEmoji, setSoundEmoji] = createSignal("");
   const [uploading, setUploading] = createSignal(false);
   const [error, setError] = createSignal<string>();
+  const [search, setSearch] = createSignal("");
   let personalFileInput: HTMLInputElement | undefined;
   let serverFileInput: HTMLInputElement | undefined;
 
+  // Trae los sonidos personales del servidor (para ver los subidos desde
+  // otros dispositivos); si el backend no tiene la ruta, se ignora.
+  onMount(() => {
+    void state.soundboard.syncPersonal(client());
+  });
+
   function play(sound: { fileId: string; volume: number }) {
-    voice.playSoundboardSound(
-      sound.fileId,
-      sound.volume / 100,
-    );
+    voice.playSoundboardSound(sound.fileId, sound.volume / 100);
   }
+
+  const matches = (s: { name: string }) => {
+    const q = search().trim().toLowerCase();
+    return !q || s.name.toLowerCase().includes(q);
+  };
+  const personalList = createMemo(() =>
+    state.soundboard.personalSounds.filter(matches),
+  );
+  const serverList = createMemo(() => serverSounds().filter(matches));
+  const favoriteList = createMemo<PanelSound[]>(() =>
+    search().trim()
+      ? []
+      : [...state.soundboard.personalSounds, ...serverSounds()].filter((s) =>
+          state.soundboard.favorites.includes(s.id),
+        ),
+  );
+  const nothingFound = createMemo(
+    () => !!search().trim() && !personalList().length && !serverList().length,
+  );
 
   function onFileChosen(scope: Scope) {
     return (e: Event) => {
@@ -327,114 +431,189 @@ function SoundboardPanel(props: {
             </AddForm>
           }
         >
-          <Scroll>
-            <VolumeRow>
-              <Symbol size={18}>
-                {state.soundboard.masterVolume === 0 ? "volume_off" : "volume_up"}
-              </Symbol>
-              <Slider
-                min={0}
-                max={1.5}
-                step={0.05}
-                value={state.soundboard.masterVolume}
-                onInput={(event) =>
-                  (state.soundboard.masterVolume = Number(
-                    event.currentTarget.value,
-                  ))
+          <TopBar>
+            <SearchBox>
+              <Symbol size={20}>search</Symbol>
+              <SearchInput
+                autofocus
+                placeholder={t`Buscar sonido`}
+                value={search()}
+                onInput={(e: InputEvent) =>
+                  setSearch((e.currentTarget as HTMLInputElement).value)
                 }
-                labelFormatter={(label) => (label * 100).toFixed(0) + "%"}
               />
-            </VolumeRow>
-            <Header>
-              <Trans>Mi soundboard</Trans>
-            </Header>
-            <Grid>
-              <For each={state.soundboard.personalSounds}>
-                {(sound: SoundboardSound) => (
-                  <SoundTile>
-                    <SoundTileButton onClick={() => play(sound)}>
-                      <span>{sound.emoji ?? "🔊"}</span>
-                      <SoundName>{sound.name}</SoundName>
-                    </SoundTileButton>
-                    <Show when={!sound.isDefault}>
-                      <RemoveButton
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation();
-                          removePersonal(sound.id);
-                        }}
-                        title={t`Eliminar`}
-                      >
-                        <Symbol>close</Symbol>
-                      </RemoveButton>
-                    </Show>
-                  </SoundTile>
-                )}
-              </For>
-              <AddTile
-                onClick={() => personalFileInput?.click()}
-                title={t`Añadir sonido`}
-              >
-                <Symbol>add</Symbol>
-              </AddTile>
-            </Grid>
-            <input
-              ref={personalFileInput}
-              type="file"
-              accept="audio/*"
-              style={{ display: "none" }}
-              onChange={onFileChosen("personal")}
-            />
-
-            <Show when={server()}>
-              <Header>
-                <Trans>Soundboard del servidor</Trans>
-              </Header>
-              <Show when={serverBoardError()}>
-                <ErrorText>{serverBoardError()}</ErrorText>
+              <Show when={search()}>
+                <ClearButton
+                  title={t`Borrar búsqueda`}
+                  onClick={() => setSearch("")}
+                >
+                  <Symbol size={18}>close</Symbol>
+                </ClearButton>
               </Show>
-              <Show
-                when={!loadingServerSounds()}
-                fallback={<LoadingText>{t`Cargando…`}</LoadingText>}
-              >
+            </SearchBox>
+            <VolumeBox title={t`Volumen del soundboard`}>
+              <Symbol size={20}>
+                {state.soundboard.masterVolume === 0
+                  ? "volume_off"
+                  : "volume_up"}
+              </Symbol>
+              <SliderWrap>
+                <Slider
+                  min={0}
+                  max={1.5}
+                  step={0.05}
+                  value={state.soundboard.masterVolume}
+                  onInput={(event) =>
+                    (state.soundboard.masterVolume = Number(
+                      event.currentTarget.value,
+                    ))
+                  }
+                  labelFormatter={(label) => (label * 100).toFixed(0) + "%"}
+                />
+              </SliderWrap>
+              <VolumeValue>
+                {Math.round(state.soundboard.masterVolume * 100)}%
+              </VolumeValue>
+            </VolumeBox>
+          </TopBar>
+
+          <Scroll>
+            <Show when={favoriteList().length > 0}>
+              <Section>
+                <SectionHeader>
+                  <Symbol size={18} fill>
+                    star
+                  </Symbol>
+                  <Trans>Favoritos</Trans>
+                  <Count>{favoriteList().length}</Count>
+                </SectionHeader>
                 <Grid>
-                  <For each={serverSounds()}>
+                  <For each={favoriteList()}>
                     {(sound) => (
-                      <SoundTile>
-                        <SoundTileButton onClick={() => play(sound)}>
-                          <span>{sound.emoji ?? "🔊"}</span>
-                          <SoundName>{sound.name}</SoundName>
-                        </SoundTileButton>
-                        <Show when={isServerOwner() && !sound.isDefault}>
-                          <RemoveButton
-                            onClick={(e: MouseEvent) => {
-                              e.stopPropagation();
-                              removeServer(sound);
-                            }}
-                            title={t`Eliminar`}
-                          >
-                            <Symbol>close</Symbol>
-                          </RemoveButton>
-                        </Show>
-                      </SoundTile>
+                      <SoundCard
+                        sound={sound}
+                        canRemove={false}
+                        onPlay={play}
+                        onRemove={() => {}}
+                      />
                     )}
                   </For>
-                  <Show when={canManageServerBoard()}>
-                    <AddTile
-                      onClick={() => serverFileInput?.click()}
-                      title={t`Añadir sonido al servidor`}
-                    >
-                      <Symbol>add</Symbol>
-                    </AddTile>
+                </Grid>
+              </Section>
+            </Show>
+
+            <Section>
+              <SectionHeader>
+                <Trans>Mi soundboard</Trans>
+                <Count>{state.soundboard.personalSounds.length}</Count>
+                <Spacer />
+                <AddButton
+                  title={t`Añadir sonido`}
+                  onClick={() => personalFileInput?.click()}
+                >
+                  <Symbol size={18}>add</Symbol>
+                  <Trans>Añadir</Trans>
+                </AddButton>
+              </SectionHeader>
+              <Show
+                when={personalList().length > 0}
+                fallback={
+                  <Show when={!search().trim()}>
+                    <EmptyHint>
+                      <Trans>
+                        Aún no tienes sonidos. Pulsa Añadir para subir uno
+                        (máx. 512 KB).
+                      </Trans>
+                    </EmptyHint>
                   </Show>
+                }
+              >
+                <Grid>
+                  <For each={personalList()}>
+                    {(sound) => (
+                      <SoundCard
+                        sound={sound}
+                        canRemove={!sound.isDefault}
+                        onPlay={play}
+                        onRemove={() => removePersonal(sound.id)}
+                      />
+                    )}
+                  </For>
                 </Grid>
               </Show>
               <input
-                ref={serverFileInput}
+                ref={personalFileInput}
                 type="file"
                 accept="audio/*"
                 style={{ display: "none" }}
-                onChange={onFileChosen("server")}
+                onChange={onFileChosen("personal")}
               />
+            </Section>
+
+            <Show when={server()}>
+              <Section>
+                <SectionHeader>
+                  <Trans>Soundboard del servidor</Trans>
+                  <Count>{serverSounds().length}</Count>
+                  <Spacer />
+                  <Show when={canManageServerBoard()}>
+                    <AddButton
+                      title={t`Añadir sonido al servidor`}
+                      onClick={() => serverFileInput?.click()}
+                    >
+                      <Symbol size={18}>add</Symbol>
+                      <Trans>Añadir</Trans>
+                    </AddButton>
+                  </Show>
+                </SectionHeader>
+                <Show when={serverBoardError()}>
+                  <ErrorText>{serverBoardError()}</ErrorText>
+                </Show>
+                <Show
+                  when={!loadingServerSounds()}
+                  fallback={<LoadingText>{t`Cargando…`}</LoadingText>}
+                >
+                  <Show
+                    when={serverList().length > 0}
+                    fallback={
+                      <Show when={!search().trim() && !serverBoardError()}>
+                        <EmptyHint>
+                          <Trans>Este servidor aún no tiene sonidos.</Trans>
+                        </EmptyHint>
+                      </Show>
+                    }
+                  >
+                    <Grid>
+                      <For each={serverList()}>
+                        {(sound) => (
+                          <SoundCard
+                            sound={sound}
+                            canRemove={isServerOwner() && !sound.isDefault}
+                            onPlay={play}
+                            onRemove={() => removeServer(sound)}
+                          />
+                        )}
+                      </For>
+                    </Grid>
+                  </Show>
+                </Show>
+                <input
+                  ref={serverFileInput}
+                  type="file"
+                  accept="audio/*"
+                  style={{ display: "none" }}
+                  onChange={onFileChosen("server")}
+                />
+              </Section>
+            </Show>
+
+            <Show when={nothingFound()}>
+              <EmptyHint>
+                <Trans>Ningún sonido coincide con «{search()}».</Trans>
+              </EmptyHint>
+            </Show>
+            <Show when={error()}>
+              <ErrorText>{error()}</ErrorText>
             </Show>
           </Scroll>
         </Show>
@@ -454,41 +633,175 @@ const Panel = styled("div", {
     zIndex: 200,
     display: "flex",
     flexDirection: "column",
-    gap: "var(--gap-sm)",
-    width: "280px",
-    maxHeight: "420px",
+    gap: "var(--gap-md)",
+    width: "min(460px, calc(100vw - 16px))",
+    maxHeight: "min(580px, 72vh)",
     padding: "var(--gap-md)",
     borderRadius: "var(--borderRadius-lg)",
     background: "var(--md-sys-color-surface-container-high)",
     boxShadow: "var(--elevation-3)",
+    overflow: "hidden",
+  },
+});
+
+const TopBar = styled("div", {
+  base: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "var(--gap-sm) var(--gap-md)",
+  },
+});
+
+const SearchBox = styled("label", {
+  base: {
+    flex: "1 1 180px",
+    minWidth: 0,
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--gap-sm)",
+    padding: "0 var(--gap-md)",
+    borderRadius: "var(--borderRadius-full)",
+    background: "var(--md-sys-color-surface-container-highest)",
+    color: "var(--md-sys-color-on-surface-variant)",
+    "&:focus-within": {
+      outline: "2px solid var(--md-sys-color-primary)",
+    },
+  },
+});
+
+const SearchInput = styled("input", {
+  base: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: "var(--md-sys-color-on-surface)",
+    font: "inherit",
+    "&::placeholder": {
+      color: "var(--md-sys-color-on-surface-variant)",
+    },
+  },
+});
+
+const ClearButton = styled("button", {
+  base: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    background: "transparent",
+    color: "inherit",
+    cursor: "pointer",
+    borderRadius: "var(--borderRadius-full)",
+    padding: "2px",
+    "&:hover": {
+      background: "var(--md-sys-color-surface-container)",
+    },
+  },
+});
+
+const VolumeBox = styled("div", {
+  base: {
+    flex: "1 1 170px",
+    minWidth: 0,
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--gap-sm)",
+    color: "var(--md-sys-color-on-surface-variant)",
+  },
+});
+
+const SliderWrap = styled("div", {
+  base: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+  },
+});
+
+const VolumeValue = styled("span", {
+  base: {
+    width: "42px",
+    textAlign: "right",
+    fontSize: "0.8em",
+    fontVariantNumeric: "tabular-nums",
   },
 });
 
 const Scroll = styled("div", {
   base: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "var(--gap-lg)",
+    overflowX: "hidden",
+    overflowY: "auto",
+    paddingRight: "var(--gap-xs)",
+    scrollbarWidth: "thin",
+  },
+});
+
+const Section = styled("section", {
+  base: {
     display: "flex",
     flexDirection: "column",
     gap: "var(--gap-sm)",
-    overflowY: "auto",
   },
 });
 
-const VolumeRow = styled("div", {
+const SectionHeader = styled("div", {
   base: {
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
     display: "flex",
     alignItems: "center",
-    gap: "var(--gap-md)",
-    padding: "var(--gap-xs) var(--gap-sm)",
-    color: "var(--md-sys-color-on-surface-variant)",
-  },
-});
-
-const Header = styled("div", {
-  base: {
+    gap: "var(--gap-sm)",
+    padding: "var(--gap-xs) 2px",
     fontSize: "0.85em",
     fontWeight: 600,
     color: "var(--md-sys-color-on-surface-variant)",
-    padding: "0 var(--gap-xs)",
+    background: "var(--md-sys-color-surface-container-high)",
+  },
+});
+
+const Count = styled("span", {
+  base: {
+    fontWeight: 400,
+    opacity: 0.7,
+    fontVariantNumeric: "tabular-nums",
+  },
+});
+
+const Spacer = styled("span", {
+  base: {
+    flex: 1,
+  },
+});
+
+const AddButton = styled("button", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "var(--gap-xs)",
+    padding: "4px var(--gap-md) 4px var(--gap-sm)",
+    border: "none",
+    borderRadius: "var(--borderRadius-full)",
+    background: "var(--md-sys-color-secondary-container)",
+    color: "var(--md-sys-color-on-secondary-container)",
+    fontSize: "inherit",
+    fontWeight: 500,
+    cursor: "pointer",
+    "&:hover": {
+      filter: "brightness(1.08)",
+    },
+    "&:focus-visible": {
+      outline: "2px solid var(--md-sys-color-primary)",
+    },
   },
 });
 
@@ -500,85 +813,115 @@ const LoadingText = styled("div", {
   },
 });
 
+const EmptyHint = styled("div", {
+  base: {
+    fontSize: "0.85em",
+    lineHeight: 1.4,
+    color: "var(--md-sys-color-on-surface-variant)",
+    padding: "var(--gap-sm) var(--gap-xs)",
+  },
+});
+
 const Grid = styled("div", {
   base: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))",
     gap: "var(--gap-sm)",
   },
 });
 
-const SoundTile = styled("div", {
+const Tile = styled("div", {
   base: {
     position: "relative",
+    "&:hover [data-action], &:focus-within [data-action]": {
+      opacity: 1,
+    },
   },
 });
 
-const SoundTileButton = styled("button", {
+const TileButton = styled("button", {
   base: {
     width: "100%",
+    minHeight: "84px",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "2px",
-    padding: "var(--gap-sm) 4px",
+    justifyContent: "center",
+    gap: "var(--gap-xs)",
+    padding: "var(--gap-md) var(--gap-sm)",
     borderRadius: "var(--borderRadius-md)",
     background: "var(--md-sys-color-surface-container)",
+    color: "var(--md-sys-color-on-surface)",
     cursor: "pointer",
     border: "none",
+    transition: "background 120ms",
     "&:hover": {
       background: "var(--md-sys-color-surface-container-highest)",
     },
     "&:active": {
       background: "var(--md-sys-color-primary-container)",
     },
+    "&:focus-visible": {
+      outline: "2px solid var(--md-sys-color-primary)",
+    },
+  },
+});
+
+const Emoji = styled("span", {
+  base: {
+    fontSize: "28px",
+    lineHeight: 1,
   },
 });
 
 const SoundName = styled("span", {
   base: {
-    fontSize: "0.7em",
-    color: "var(--md-sys-color-on-surface)",
+    maxWidth: "100%",
+    fontSize: "0.78em",
+    lineHeight: 1.15,
     textAlign: "center",
     overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    maxWidth: "100%",
+    lineClamp: 2,
+    wordBreak: "break-word",
   },
 });
 
-const RemoveButton = styled("button", {
+const TileAction = styled("button", {
   base: {
     position: "absolute",
-    top: "-4px",
-    right: "-4px",
-    width: "18px",
-    height: "18px",
+    top: "4px",
+    width: "24px",
+    height: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: "var(--borderRadius-full)",
-    background: "var(--md-sys-color-error)",
-    color: "var(--md-sys-color-on-error)",
     border: "none",
-    cursor: "pointer",
-    fontSize: "10px",
-  },
-});
-
-const AddTile = styled("button", {
-  base: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "var(--gap-sm) 4px",
-    borderRadius: "var(--borderRadius-md)",
-    background: "transparent",
-    border: "1px dashed var(--md-sys-color-outline-variant)",
-    cursor: "pointer",
+    borderRadius: "var(--borderRadius-full)",
+    background: "var(--md-sys-color-surface-container-highest)",
     color: "var(--md-sys-color-on-surface-variant)",
-    "&:hover": {
-      background: "var(--md-sys-color-surface-container)",
+    cursor: "pointer",
+    opacity: 0,
+    transition: "opacity 120ms, background 120ms, color 120ms",
+    "&[data-side=left]": {
+      left: "4px",
+    },
+    "&[data-side=right]": {
+      right: "4px",
+    },
+    "&[data-pinned=true]": {
+      opacity: 1,
+      color: "var(--md-sys-color-primary)",
+    },
+    "&[data-danger]:hover": {
+      background: "var(--md-sys-color-error)",
+      color: "var(--md-sys-color-on-error)",
+    },
+    "&:focus-visible": {
+      opacity: 1,
+      outline: "2px solid var(--md-sys-color-primary)",
+    },
+    "@media (hover: none)": {
+      opacity: 1,
     },
   },
 });
