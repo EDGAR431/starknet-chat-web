@@ -40,6 +40,11 @@ export function useError() {
     ) {
       const err = error as API.Error;
 
+      // Error added by this instance (not in the upstream API typings)
+      if ((err.type as string) === "EmailInUse") {
+        return t`Ya existe una cuenta con este correo. Inicie sesión, o pulse «¿Has olvidado tu contraseña?» si no la recuerda.`;
+      }
+
       switch (err.type) {
         case "AlreadyFriends":
           return t`Already friends with this user.`;
