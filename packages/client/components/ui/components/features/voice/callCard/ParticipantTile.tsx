@@ -311,6 +311,9 @@ const Overlay = styled("div", {
   base: {
     minWidth: 0,
     gridArea: "1/1",
+    // La capa cubre todo el mosaico: debe dejar pasar los clics (si no, tapa
+    // el botón «Ver stream» y el zoom del stream)
+    pointerEvents: "none",
 
     padding: "var(--gap-md) var(--gap-lg)",
 
@@ -493,6 +496,8 @@ const StreamGate = styled("div", {
 
 const GateButton = styled("button", {
   base: {
+    position: "relative",
+    zIndex: 1,
     display: "inline-flex",
     alignItems: "center",
     gap: "var(--gap-sm)",
@@ -514,6 +519,7 @@ const GateButton = styled("button", {
 
 const StopWatching = styled("button", {
   base: {
+    pointerEvents: "auto",
     display: "grid",
     placeItems: "center",
     width: "28px",
