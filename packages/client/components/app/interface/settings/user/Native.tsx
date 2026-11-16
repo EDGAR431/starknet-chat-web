@@ -61,6 +61,8 @@ declare global {
         ) => void,
       ): void;
       screenPickerCallback(idx: number, audio: boolean): void;
+      /** Precalienta la lista de pantallas/ventanas para abrir el selector al instante */
+      prewarmScreenSources?(): void;
       isWayland?(): Promise<boolean>;
       /** true si el audio compartido excluye las voces de la propia app (≥ 1.7) */
       loopbackExcludesApp?(): Promise<boolean>;

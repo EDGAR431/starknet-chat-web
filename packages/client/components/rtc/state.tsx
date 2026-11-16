@@ -373,6 +373,13 @@ class Voice {
 
     room.addListener("connected", () => {
       this.#setState("CONNECTED");
+      // Escritorio: deja lista la lista de ventanas para que «Compartir
+      // pantalla» abra el selector al instante
+      try {
+        window.native?.prewarmScreenSources?.();
+      } catch {
+        /* sin escritorio */
+      }
       if (this.speakingPermission)
         room.localParticipant
           .setMicrophoneEnabled(this.#settings.micOn && !this.#settings.deafen)
