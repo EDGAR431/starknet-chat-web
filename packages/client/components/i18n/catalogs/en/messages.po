@@ -1619,6 +1619,10 @@ msgstr "Done"
 msgid "Download for desktop"
 msgstr "Download for desktop"
 
+#: components/auth/src/DesktopDownload.tsx
+msgid "Download for Windows"
+msgstr "Download for Windows"
+
 #: components/app/interface/settings/user/Apps.tsx
 msgid "Download for Windows (installer)"
 msgstr "Download for Windows (installer)"

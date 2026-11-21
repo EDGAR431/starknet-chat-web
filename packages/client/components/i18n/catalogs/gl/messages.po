@@ -1491,6 +1491,10 @@ msgstr "Feito"
 msgid "Download for desktop"
 msgstr "Descargar para escritorio"
 
+#: components/auth/src/DesktopDownload.tsx
+msgid "Download for Windows"
+msgstr "Descargar para Windows"
+
 #: components/app/interface/settings/user/Apps.tsx
 msgid "Download for Windows (installer)"
 msgstr "Descargar para Windows (instalador)"

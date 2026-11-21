@@ -29,6 +29,7 @@ import MdDarkMode from "@material-design-icons/svg/filled/dark_mode.svg?componen
 
 import Wordmark from "../../../public/assets/web/wordmark.svg?component-solid";
 import { AppUpsell } from "./AppUpsell";
+import { DesktopDownload } from "./DesktopDownload";
 import { BubbleMood, BubbleProvider, FlowBase, FlowBubble } from "./flows/Flow";
 
 import Bluesky from "./flows/bluesky.svg?component-solid";
@@ -532,6 +533,7 @@ export function AuthPage(props: { children: JSX.Element }) {
             </Brand>
 
             <TopbarActions>
+              <DesktopDownload />
               <AccountSwitch>
                 <Show
                   when={isCreate()}
