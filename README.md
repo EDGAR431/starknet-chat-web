@@ -1,32 +1,14 @@
-<div align="center">
-<h1>
-  Stoat Frontend
-  
-  [![Stars](https://img.shields.io/github/stars/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/stargazers)
-  [![Forks](https://img.shields.io/github/forks/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/network/members)
-  [![Pull Requests](https://img.shields.io/github/issues-pr/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/pulls)
-  [![Issues](https://img.shields.io/github/issues/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/issues)
-  [![Contributors](https://img.shields.io/github/contributors/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/graphs/contributors)
-  [![License](https://img.shields.io/github/license/stoatchat/for-web?style=flat-square&logoColor=white)](https://github.com/stoatchat/for-web/blob/main/LICENSE)
-</h1>
-The official web client powering https://stoat.chat/app, built with <a href="https://www.solidjs.com/">Solid.js</a> 💖. <br/>
-Track the project roadmap on <a href="https://op.stoatinternal.com/projects/revolt-for-web/roadmap">OpenProject</a>.
-</div>
-<br/>
+# StarknetChat — Web Client
 
-## StarknetChat
+The web client powering [starknet-chat.tech](https://starknet-chat.tech), built with [Solid.js](https://www.solidjs.com/).
 
-This repository is a modified fork of Stoat's web client, powering [starknet-chat.tech](https://starknet-chat.tech). It is published here to comply with the AGPLv3 license. Related repositories:
+This repository is a modified fork of Stoat's web client (AGPL-3.0). It is published here to comply with that license. Related repositories:
 
 - Backend: https://github.com/EDGAR431/starknet-chat-backend
 - Desktop app: https://github.com/EDGAR431/starknet-chat-desktop
 - Android app: https://github.com/EDGAR431/starknet-chat-android
 
-<br/>
-
 ## Development Guide
-
-Before contributing, make yourself familiar with [our contribution guidelines](https://developers.stoat.chat/developing/contrib/), the [code style guidelines](./GUIDELINES.md), and the [technical documentation for this project](https://stoatchat.github.io/for-web/).
 
 Before getting started, you'll want to install:
 
@@ -37,11 +19,8 @@ Then proceed to setup:
 
 ```bash
 # clone the repository
-git clone --recursive https://github.com/stoatchat/for-web client
+git clone https://github.com/EDGAR431/starknet-chat-web client
 cd client
-
-# update submodules if you pull new changes
-# git submodule init && git submodule update
 
 # install all packages
 mise install:frozen
@@ -62,20 +41,9 @@ mise dev
 mise check
 ```
 
-Finally, navigate to http://local.revolt.chat:5173.
+### Connecting to a backend
 
-### Using the official backend
-
-By default, the client connects to a backend running on the same host (localhost).
-
-If you want the client to connect to the official hosted backend instead, open the .env file at /packages/client/.env and comment out the local URL varaibles like this:
-
-```env
-# connect to local Stoat instance
-#VITE_API_URL=http://localhost:14702
-```
-
-When these variables are not set, the client automatically falls back to the official backend. (See https://github.com/stoatchat/for-web/blob/main/packages/client/components/common/lib/env.ts)
+By default, the client connects to a backend running on the same host (localhost). To point it at a different instance, edit `packages/client/.env` and set `VITE_API_URL` to that instance's API URL.
 
 ## Deployment Guide
 
@@ -91,7 +59,7 @@ mise build:deps
 # build for web
 mise build
 
-# ... when building for Stoat production
+# ... when building for production
 mise build:prod
 ```
 
@@ -113,3 +81,7 @@ The app currently needs the following routes:
 - `/channel`
 
 This corresponds to [Content.tsx#L33](packages/client/src/index.tsx).
+
+## License
+
+AGPL-3.0 — see [LICENSE](./LICENSE).
