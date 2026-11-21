@@ -325,7 +325,9 @@ const Config: SettingsConfiguration<{ server: Server }> = {
         {
           entries: [
             {
-              href: "https://github.com/EdgarVazquez",
+              href: window.native
+                ? "https://github.com/EDGAR431/starknet-chat-desktop"
+                : "https://github.com/EDGAR431/starknet-chat-web",
               icon: <MdMemory {...iconSize(20)} />,
               title: <Trans>Source Code</Trans>,
             },

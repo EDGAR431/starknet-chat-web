@@ -14,6 +14,16 @@ Track the project roadmap on <a href="https://op.stoatinternal.com/projects/revo
 </div>
 <br/>
 
+## StarknetChat
+
+This repository is a modified fork of Stoat's web client, powering [starknet-chat.tech](https://starknet-chat.tech). It is published here to comply with the AGPLv3 license. Related repositories:
+
+- Backend: https://github.com/EDGAR431/starknet-chat-backend
+- Desktop app: https://github.com/EDGAR431/starknet-chat-desktop
+- Android app: https://github.com/EDGAR431/starknet-chat-android
+
+<br/>
+
 ## Development Guide
 
 Before contributing, make yourself familiar with [our contribution guidelines](https://developers.stoat.chat/developing/contrib/), the [code style guidelines](./GUIDELINES.md), and the [technical documentation for this project](https://stoatchat.github.io/for-web/).
